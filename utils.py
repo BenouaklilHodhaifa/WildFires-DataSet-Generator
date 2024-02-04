@@ -1,6 +1,34 @@
 import numpy as np
 import pandas as pd
+import requests
 import math
+import custom_exceptions
+
+
+def gfed_data_loader(year:int):
+    """
+    This function generates a "gfed_data.hdf5" file that should be a copy of the GFED
+    data file in the GFED database that corresponds to the "year" sent as parameter.
+    It does that by requesting the https server of the GFED database for the matching file.
+    """
+    #checking for year validity
+    if year<1997 or year>2016:
+         raise custom_exceptions.Gfed_year_out_of_bound_exception(f"Gfed_year_out_of_bound_exception: year {year} is not accepted")
+    
+    #making the request to the GFED server
+    remote_file_name = "GFED4.1s_" + str(year) + ".hdf5"
+    print("WAITING FOR RESPONSE FROM GFED ...")
+    request = requests.get("https://www.geo.vu.nl/~gwerf/GFED/GFED4/"+remote_file_name)
+    #checking for the request status
+    if request.status_code != 200:
+        raise custom_exceptions.Gfed_request_exception(f"Gfed_request_Exception: request returned with status code = {request.status_code}", request.status_code)
+    
+    #writing fetched data to the local gfed_data.hdf5 file 
+    print("WRITING DATA TO LOCAL FILE ...")
+    with open("gfed_data.hdf5","wb") as f:
+         f.write(request.content)
+    print("DONE.")
+
 
 def coordinates_selecter(lat_min:float, lat_max:float, lon_min:float, lon_max:float)->np.ndarray:
     """
