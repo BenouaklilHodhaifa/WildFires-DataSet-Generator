@@ -1,34 +1,50 @@
-import numpy as np
-import pandas as pd
+from custom_exceptions import GFED_YearNotAvailableException
+from custom_exceptions import GFED_RequestException
 import requests
+import pandas as pd
+import numpy as np
 import math
-import custom_exceptions
+import h5py
 
+def year_not_available(year):
+    MAX_YEAR = 2016  # the max year allowed in the API
+    MIN_YEAR = 1997  # the min year allowed in the API
+    return year < MIN_YEAR or year > MAX_YEAR
 
-def gfed_data_loader(year:int):
+def make_remote_GFED_file_url(year):
+    BASE_URL = "https://www.geo.vu.nl/~gwerf/GFED/GFED4/"
+
+    remote_file_name = "GFED4.1s_" + str(year) + ".hdf5"
+    result = BASE_URL + remote_file_name
+    return result
+
+def fetch_gfed_data_for_year(year :int, dir: str = "", file_name: str = "gfed_data.hdf5"):
     """
     This function generates a "gfed_data.hdf5" file that should be a copy of the GFED
     data file in the GFED database that corresponds to the "year" sent as parameter.
     It does that by requesting the https server of the GFED database for the matching file.
     """
-    #checking for year validity
-    if year<1997 or year>2016:
-         raise custom_exceptions.Gfed_year_out_of_bound_exception(f"Gfed_year_out_of_bound_exception: year {year} is not accepted")
-    
-    #making the request to the GFED server
-    remote_file_name = "GFED4.1s_" + str(year) + ".hdf5"
-    print("WAITING FOR RESPONSE FROM GFED ...")
-    request = requests.get("https://www.geo.vu.nl/~gwerf/GFED/GFED4/"+remote_file_name)
-    #checking for the request status
-    if request.status_code != 200:
-        raise custom_exceptions.Gfed_request_exception(f"Gfed_request_Exception: request returned with status code = {request.status_code}", request.status_code)
-    
-    #writing fetched data to the local gfed_data.hdf5 file 
-    print("WRITING DATA TO LOCAL FILE ...")
-    with open("gfed_data.hdf5","wb") as f:
-         f.write(request.content)
-    print("DONE.")
+    # checking for year validity
+    if year_not_available(year):
+        raise GFED_YearNotAvailableException \
+            (f"GFED_YearNotAvailableException: year {year} is not available")
 
+
+    remote_file_url = make_remote_GFED_file_url(year)
+
+    print('made remote file url: {}'.format(remote_file_url))
+    request = requests.get(remote_file_url)
+    # checking for the request status
+    if request.status_code != 200: # if the request is not successful
+        raise GFED_RequestException \
+            (f"GFED_RequestException: request returned with status code = {request.status_code}", request.status_code)
+
+    # writing fetched data to the local gfed_data.hdf5 file
+    path = dir + file_name
+    with open(path, "wb") as f:
+        f.write(request.content)
+
+# the coordinate selector
 
 def coordinates_selecter(lat_min:float, lat_max:float, lon_min:float, lon_max:float)->np.ndarray:
     """
@@ -38,7 +54,7 @@ def coordinates_selecter(lat_min:float, lat_max:float, lon_min:float, lon_max:fl
         lat_min: latititude min
         lat_max: latitude max
 
-    and returns the corresponding coordinates (center of the activated cells) in the GFED grid as an np array  
+    and returns the corresponding coordinates (center of the activated cells) in the GFED grid as an np array
     """
     #getting the x_min and x_max indexes
     x_min = math.floor((lon_min+180)*4)
@@ -48,7 +64,7 @@ def coordinates_selecter(lat_min:float, lat_max:float, lon_min:float, lon_max:fl
     y_max = math.floor((lat_max+90)*4)
 
     #creating the np array
-    number_of_rows = (y_max - y_min + 1) * (x_max - x_min + 1) 
+    number_of_rows = (y_max - y_min + 1) * (x_max - x_min + 1)
     ar = np.empty(shape=(number_of_rows, 2), dtype=np.float64)
 
     #filling the np array
@@ -63,15 +79,18 @@ def coordinates_selecter(lat_min:float, lat_max:float, lon_min:float, lon_max:fl
     return ar
 
 
-def gfed_portioner(earth_map:np.ndarray, lat_min:float, lat_max:float, lon_min:float, lon_max:float)->pd.DataFrame:
+#
+def gfed_portioner(file_path: str, month: int, lat_min: float, lat_max: float, lon_min: float,
+                   lon_max: float) -> pd.DataFrame:
     """
     This function receives as input:
-        earth_map: a 720 * 1440 gfed earth map
+        file_name: the path to the GFED file
+        # earth_map: a 720 * 1440 gfed earth map
         lon_min: longitude min
         lon_max: longitude max
         lat_min: latititude min
         lat_max: latitude max
-    
+
     and returns a data frame corresponding to the delimited region:
         y: the latitude cell in the gfed earth map
         x: the longitude cell in the gfed earth map
@@ -80,23 +99,27 @@ def gfed_portioner(earth_map:np.ndarray, lat_min:float, lat_max:float, lon_min:f
         Was Burnt: a boolean indicating whether that cell was burnt
         Burnt %: The percentage of that cell that burnt
     """
-    #getting the x_min and x_max indexes
-    x_min = math.floor((lon_min+180)*4)
-    x_max = math.floor((lon_max+180)*4)
-    #getting the y_min and y_max indexes
-    y_min = math.floor((lat_min+90)*4)
-    y_max = math.floor((lat_max+90)*4)
-    
+    # getting the x_min and x_max indexes
+    x_min = math.floor((lon_min + 180) * 4)
+    x_max = math.floor((lon_max + 180) * 4)
+    # getting the y_min and y_max indexes
+    y_min = math.floor((lat_min + 90) * 4)
+    y_max = math.floor((lat_max + 90) * 4)
+
+    with h5py.File(file_path, 'r') as file:
+        earth_map = np.array(file.get("burned_area/{}/burned_fraction".format(str(month))))
+
     df = pd.DataFrame(
-        data = earth_map[719-y_max:719-y_min+1, x_min:x_max+1][::-1],
-        index = pd.Index(data=[-90 + i*0.25 + 0.125 for i in range(y_min, y_max+1)], name="Latitude"),
-        columns = [-180+i*0.25 + 0.125 for i in range(x_min, x_max+1)]
+        data=earth_map[719 - y_max:719 - y_min + 1, x_min:x_max + 1][::-1],
+        index=pd.Index(data=[-90 + i * 0.25 + 0.125 for i in range(y_min, y_max + 1)], name="Latitude"),
+        columns=[-180 + i * 0.25 + 0.125 for i in range(x_min, x_max + 1)]
     )
-    
+
     df = df.stack()
     df.index.set_names(names="Longitude", level=1, inplace=True)
     df = df.reset_index(name="Burnt %")
-    df.insert(2,'Was burnt', (df['Burnt %'] != 0).astype(int))
-    df.insert(0, 'y', ((90-df['Latitude'])*4).astype(int))
-    df.insert(1, 'x', ((df['Longitude']+180)*4).astype(int))
+    df.insert(2, 'Was burnt', (df['Burnt %'] != 0).astype(int))
+    df.insert(0, 'y', ((90 - df['Latitude']) * 4).astype(int))
+    df.insert(1, 'x', ((df['Longitude'] + 180) * 4).astype(int))
+
     return df
