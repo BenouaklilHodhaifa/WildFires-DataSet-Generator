@@ -1,5 +1,6 @@
 flask
 Flask-SQLAlchemy
+mysql-connector-python
 python-dotenv
 flask_cors
 numpy
