@@ -116,25 +116,29 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
     df = pd.DataFrame() # Final Dataframe to be returned
 
     for d in date_iterator(start_date, end_date):
+        # Get the local path to read data from
         local_path = os.path.join(daily_burned_area_folder, f"daily_burned_area_{d.day}_{d.month}_{d.year}.hdf")
-        database = SD(local_path, SDC.READ)
-        earth_map = database.select('BurnedArea').get()
+        
+        if os.path.isfile(local_path):
+            database = SD(local_path, SDC.READ) # read the hdf file
+            earth_map = database.select('BurnedArea').get() # get data from burned area database 
 
-        temp_df = pd.DataFrame(
-            data=earth_map[719 - y_max:719 - y_min + 1, x_min:x_max + 1][::-1],
-            index=pd.Index(data=[-90 + i * 0.25 + 0.125 for i in range(y_min, y_max + 1)], name="latitude"),
-            columns=[-180 + i * 0.25 + 0.125 for i in range(x_min, x_max + 1)]
-        )
+            # Transform data into a dataframe
+            temp_df = pd.DataFrame(
+                data=earth_map[719 - y_max:719 - y_min + 1, x_min:x_max + 1][::-1],
+                index=pd.Index(data=[-90 + i * 0.25 + 0.125 for i in range(y_min, y_max + 1)], name="latitude"),
+                columns=[-180 + i * 0.25 + 0.125 for i in range(x_min, x_max + 1)]
+            )
 
-        temp_df = temp_df.stack()
-        temp_df.index.set_names(names="longitude", level=1, inplace=True)
-        temp_df = temp_df.reset_index(name="burned_area")
-        temp_df.insert(2, 'date', d)
+            temp_df = temp_df.stack()
+            temp_df.index.set_names(names="longitude", level=1, inplace=True)
+            temp_df = temp_df.reset_index(name="burned_area")
+            temp_df.insert(2, 'date', d)
 
-        # Concatenate dataframes into one
-        if df.empty:
-            df = temp_df
-        else:
-            df = pd.concat([df, temp_df], ignore_index=True)
+            # Concatenate dataframes into one
+            if df.empty:
+                df = temp_df
+            else:
+                df = pd.concat([df, temp_df], ignore_index=True)
 
     return df
