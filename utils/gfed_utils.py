@@ -6,7 +6,9 @@ import numpy as np
 import math
 import h5py
 import os
-from datetime import datetime as dt
+from datetime import date
+
+BASE_URL = "https://www.geo.vu.nl/~gwerf/GFED/GFED4/"
 
 def year_not_available(year):
     MAX_YEAR = 2016  # the max year allowed in the API
@@ -14,8 +16,6 @@ def year_not_available(year):
     return year < MIN_YEAR or year > MAX_YEAR
 
 def make_remote_GFED_file_url(year):
-    BASE_URL = "https://www.geo.vu.nl/~gwerf/GFED/GFED4/"
-
     remote_file_name = "GFED4.1s_" + str(year) + ".hdf5"
     result = BASE_URL + remote_file_name
     return result
@@ -133,7 +133,7 @@ def gfed_portioner(file_path: str, month: int, lat_min: float, lat_max: float, l
 
     return df
 
-def get_gfed_data_for_range(start_date:dt, end_date:dt, lat_min:float, lat_max:float, lng_min:float, lng_max:float, gfed_files_folder="."):
+def get_gfed_data_for_range(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, gfed_files_folder="."):
     """Gets data from GFED official open data for a specified range in time and space (geographical space) then 
     returns three dataframes:
         - A dataframe containing all geographical positions retrieved (latitude, longitude)
@@ -142,9 +142,9 @@ def get_gfed_data_for_range(start_date:dt, end_date:dt, lat_min:float, lat_max:f
     
     Parameters
     ----------
-    start_date : datetime
+    start_date : date
         start date of the time range.
-    end_date : datetime
+    end_date : date
         end date of the time range.
     lat_min : float
         minimum bound of the latitude for the geographical range.

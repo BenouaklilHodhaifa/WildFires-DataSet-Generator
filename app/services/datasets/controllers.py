@@ -1,5 +1,5 @@
 from flask import request
-from datetime import datetime as dt
+from datetime import date
 from .utils.gfed_utils import get_gfed_data_for_range
 from .utils.open_meteo_utils import get_data as get_open_meteo_data
 from app import db
@@ -10,8 +10,8 @@ import pandas as pd
 def populate():
     """Admin route controller for populating the data from sources"""
     try:
-        start_date = dt.fromisoformat(request.args.get("start_date"))
-        end_date = dt.fromisoformat(request.args.get("start_date"))
+        start_date = date.fromisoformat(request.args.get("start_date"))
+        end_date = date.fromisoformat(request.args.get("start_date"))
         lng_min = request.args.get("lng_min")
         lng_max = request.args.get("lng_max")
         lat_min = request.args.get("lat_min")
