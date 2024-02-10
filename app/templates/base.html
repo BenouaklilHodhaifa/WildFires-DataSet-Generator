@@ -8,6 +8,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
 </head>
 <body>
     <div class="body-container">
@@ -23,47 +29,61 @@
         </div>
         <div class="content">
             <div class="content-left">
-                <p class="content-title">Generate Your WildFires <span>Data</span></p>
-                <p class="content-description">To generate WildFires data, you must set a geographical range by limiting latitude and longitude coordinates and 
-                    also a time range by setting a start date and an end date.
-                </p>
-                <div class="inputs">
-                    <p>Geographical Range</p>
-                    <div class="inputs-group">
-                        <div class="form__group field">
-                            <input type="number" class="form__field" placeholder="0">
-                            <label for="lat_min" class="form__label">Latitude Min</label>
+                <div class="content-left-container">
+                    <p class="content-title">Generate Your WildFires <span>Data</span></p>
+                    <p class="content-description">To generate WildFires data, you must set a geographical range by limiting latitude and longitude coordinates and 
+                        also a time range by setting a start date and an end date.
+                    </p>
+                    <div class="inputs">
+                        <p>Geographical Range</p>
+                        <div class="inputs-group">
+                            <div class="form__group field">
+                                <input type="number" class="form__field" placeholder="0">
+                                <label for="lat_min" class="form__label">Latitude Min</label>
+                            </div>
+                            <div class="form__group field">
+                                <input type="number" class="form__field" placeholder="Latitude Max">
+                                <label for="lat_max" class="form__label">Latitude Max</label>
+                            </div>
+                            <div class="form__group field">
+                                <input type="number" class="form__field" placeholder="Longitude Min">
+                                <label for="lng_min" class="form__label">Longitude Min</label>
+                            </div>
+                            <div class="form__group field">
+                                <input type="number" class="form__field" placeholder="Longitude Max">
+                                <label for="lng_max" class="form__label">Longitude Max</label>
+                            </div>
                         </div>
-                        <div class="form__group field">
-                            <input type="number" class="form__field" placeholder="Latitude Max">
-                            <label for="lat_max" class="form__label">Latitude Max</label>
-                        </div>
-                        <div class="form__group field">
-                            <input type="number" class="form__field" placeholder="Longitude Min">
-                            <label for="lng_min" class="form__label">Longitude Min</label>
-                        </div>
-                        <div class="form__group field">
-                            <input type="number" class="form__field" placeholder="Longitude Max">
-                            <label for="lng_max" class="form__label">Longitude Max</label>
+                        <p>Time Range</p>
+                        <div class="inputs-group">
+                            <div class="form__group field">
+                                <input type="date" class="form__field" placeholder="Start Date">
+                                <label for="start_date" class="form__label">Start Date</label>
+                            </div>
+                            <div class="form__group field">
+                                <input type="date" class="form__field" placeholder="End Date">
+                                <label for="end_date" class="form__label">End Date</label>
+                            </div>
                         </div>
                     </div>
-                    <p>Time Range</p>
-                    <div class="inputs-group">
-                        <div class="form__group field">
-                            <input type="date" class="form__field" placeholder="Start Date">
-                            <label for="start_date" class="form__label">Start Date</label>
-                        </div>
-                        <div class="form__group field">
-                            <input type="date" class="form__field" placeholder="End Date">
-                            <label for="end_date" class="form__label">End Date</label>
-                        </div>
+                    <div class="submit-button-container">
+                        <button class="submit-button">
+                            <span>Generate</span>
+                        </button>
                     </div>
                 </div>
             </div>
             <div class="content-right">
-
+                <div id="map"></div>
             </div>
         </div>
     </div>
+    <script>
+        var map = L.map('map').setView([51.505, -0.09], 13);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+    </script>
 </body>
 </html>

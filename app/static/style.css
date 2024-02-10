@@ -1,11 +1,11 @@
 /* ============================= Body ===============================*/
 
-html{
+html {
     height: 100%;
     margin: 0;
 }
 
-body{
+body {
     background-color: #EEEEEE;
     font-family: 'Poppins', sans-serif;
     height: 100%;
@@ -21,7 +21,7 @@ body{
 
 /* ============================= Navbar ===============================*/
 
-.navbar{
+.navbar {
     display: flex;
     align-items: center;
     justify-content: space-evenly;
@@ -30,91 +30,97 @@ body{
     box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.05) 0px 4px 6px -2px;
 }
 
-.navbar-part{
+.navbar-part {
     display: flex;
     align-items: center;
 }
 
-.navbar p{
+.navbar p {
     margin: 0;
 }
 
-.navbar span{
+.navbar span {
     font-weight: 600;
 }
 
-.navbar img{
+.navbar img {
     width: 50px;
     height: auto;
     margin-right: 5px;
 }
 
-.navbar a{
+.navbar a {
     margin-left: 15px;
     margin-right: 15px;
     text-decoration: none;
     color: #454545;
 }
 
-/* ======================================== Content ===========================================*/
+/* ======================================== Content =========================================== */
 
-.content{
+.content {
     display: flex;
+    flex-direction: row;
     flex: 1 1 auto;
 }
 
-/* ========================== Content Left ==========================*/
+/* ========================== Content Left ========================== */
 
-.content-left{
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-    width: 100%;
-}
-
-.content-title{
-    font-size: 2em;
-    font-weight: 600;
-    margin:0;
-    margin-left: 20px;
-    margin-bottom: 10px;
-}
-
-.content-title span{
-    color: #EB6325;
-}
-
-.content-description{
-    margin:0;
-    margin-left: 20px;
-}
-
-.content-right{
+.content-left {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    margin: 0;
     height: 100%;
     width: 100%;
 }
 
-.inputs p{
+.content-left-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 80%;
+    width: 90%;
+}
+
+.content-title {
+    font-size: 2em;
+    font-weight: 600;
+    margin:0;
+    margin-bottom: 10px;
+}
+
+.content-title span {
+    color: #EB6325;
+}
+
+.content-description {
+    margin:0;
+}
+
+.inputs {
+    margin-bottom: 40px;
+}
+
+.inputs p {
     font-size: 1.3em;
     font-weight: 600;
     text-decoration: underline;
-    margin: 20px 0 10px 20px;
+    margin: 30px 0 5px 0;
 }
 
-.inputs-group{
+.inputs-group {
     display: flex;
+    flex-wrap: wrap;
+    row-gap: 10px;
 }
 
 /* ================= TextInputs ==================== */
 
 .form__group {
     position: relative;
-    padding: 20px 20px 0;
+    padding: 20px 20px 0 0;
 }
   
 .form__field {
@@ -165,4 +171,114 @@ body{
 /* reset input */
 .form__field:required, .form__field:invalid {
     box-shadow: none;
+}
+
+/* ================= Generate Button ================== */
+
+.submit-button-container{
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.submit-button {
+    position: relative;
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    border-radius: 0.8em;
+    cursor: pointer;
+    border: none;
+    background: linear-gradient(to right, #df8860, #EB6325);
+    color: ghostwhite;
+    overflow: hidden;
+}
+
+.submit-button svg {
+    width: 1.2em;
+    height: 1.2em;
+    margin-right: 0.5em;
+}
+
+.submit-button span {
+    position: relative;
+    z-index: 10;
+    transition: color 0.4s;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.8em 1.2em 0.8em 1.05em;
+}
+
+.submit-button::before,
+.submit-button::after {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+.submit-button::before {
+    content: "";
+    background: #000;
+    width: 120%;
+    left: -10%;
+    transform: skew(30deg);
+    transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1);
+}
+
+.submit-button:hover::before {
+    transform: translate3d(100%, 0, 0);
+}
+
+.submit-button:active {
+    transform: scale(0.95);
+}
+
+/* ========================== Content Right ========================== */
+
+.content-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+}
+
+#map {
+    height: 80%;
+    width: 90%;
+    border-radius: 16px;
+}
+
+/* ============================ Responsive Content and Content Parts ============================== */
+@media only screen and (max-width: 1200px) {
+    .content {
+        flex-direction: column;
+        flex: none;
+    }
+
+    .nav{
+        flex: none;
+    }
+
+    .content-left {
+        height: auto;
+        margin-top: 40px;
+        margin-bottom: 40px;
+    }
+
+    .content-right {
+        height: auto;
+        margin-bottom: 40px;
+    }
+
+    #map{
+        height: 400px;
+        width: 60%;
+    }
 }
