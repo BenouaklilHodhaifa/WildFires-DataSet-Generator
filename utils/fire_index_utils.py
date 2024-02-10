@@ -1,11 +1,10 @@
 from firedanger import firedanger
 import pandas as pd
-from flask import current_app as app
 import os
 from datetime import datetime as dt
 
 def get_dataset_with_fire_indexes(ds:pd.DataFrame, time_name="time", time_format="%Y%m%d", temp_name="T",
-                                  precip_name="P", hum_name="H", wind_name="U") -> pd.DataFrame:
+                                  precip_name="P", hum_name="H", wind_name="U", temp_meteo_folder=".") -> pd.DataFrame:
     """
     Adds fire indexes (ffmc, dmc, dc, isi, bui and fwi) to a specified dataset that has to include 
     for each row: the day of the observation (time), the air temperature (°C), precipitation (mm), air humidity (%)
@@ -28,9 +27,11 @@ def get_dataset_with_fire_indexes(ds:pd.DataFrame, time_name="time", time_format
         name of the column referring to the air humidity (%) of each observation. Default is "H".
     wind_name : str
         name of the column referring to the wind speed (m/s) of each observation. Default is "U".
+    temp_meteo_folder : str
+        path of the folder where to store temporary files made from meteo data
     """
     # Create a unique name for a temporary file
-    temp_file_name = os.path.join(app.config['TEMP_METEO_FOLDER'], f'temp{int(dt.now().timestamp())}.csv')
+    temp_file_name = os.path.join(temp_meteo_folder, f'temp{int(dt.now().timestamp())}.csv')
     # Save the dataset to a the temporary file
     ds.to_csv(temp_file_name)
     # Create a firedanger instance
