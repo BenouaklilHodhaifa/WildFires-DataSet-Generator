@@ -1,6 +1,5 @@
 import pandas as pd
 import requests
-from fire_index_utils import get_data_with_fire_indexes
 from tqdm import tqdm
 
 from gfed_utils import coordinates_selecter
@@ -72,6 +71,5 @@ def get_data(lat_min:float, lat_max:float, lon_min:float, lon_max:float, start_d
         fill_point_in_dict(data, meteo_data)
 
     df = pd.DataFrame(meteo_data)
-    df = get_data_with_fire_indexes(df)
 
     return df

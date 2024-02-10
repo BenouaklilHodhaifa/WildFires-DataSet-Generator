@@ -10,3 +10,4 @@ h5py
 git+https://github.com/steidani/firedanger.git
 scipy
 pysftp
+tqdm
