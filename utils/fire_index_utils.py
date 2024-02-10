@@ -29,6 +29,11 @@ def get_dataset_with_fire_indexes(ds:pd.DataFrame, time_name="time", time_format
         name of the column referring to the wind speed (m/s) of each observation. Default is "U".
     temp_meteo_folder : str
         path of the folder where to store temporary files made from meteo data
+
+    Returns
+    -------
+    out : pandas.DataFrame
+        the generated dataframe
     """
     # Create a unique name for a temporary file
     temp_file_name = os.path.join(temp_meteo_folder, f'temp{int(dt.now().timestamp())}.csv')
