@@ -6,3 +6,5 @@ app/files/open_meteo/*
 data/fuoco/*
 data/gfed/*
 data/meteo/*
+script.py
+gfed*
