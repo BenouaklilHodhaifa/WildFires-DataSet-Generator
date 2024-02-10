@@ -1,9 +1,9 @@
 from flask import request
 from datetime import date
-from .utils.gfed_utils import get_gfed_data_for_range
-from .utils.open_meteo_utils import get_data as get_open_meteo_data
+from utils.gfed_utils import get_gfed_burned_area_fraction_for_range
+from utils.open_meteo_utils import get_data as get_open_meteo_data
 from app import db
-from flask import jsonify
+from flask import jsonify, current_app as app
 from sqlalchemy import text
 import pandas as pd
 
@@ -18,8 +18,8 @@ def populate():
         lat_max = request.args.get("lng_max")
 
         # Get GFED Data
-        geo_pos_df, time_df, gfed_df = get_gfed_data_for_range(start_date, end_date, lat_min, lat_max,
-                                                            lng_min, lng_max)
+        geo_pos_df, time_df, gfed_df = get_gfed_burned_area_fraction_for_range(start_date, end_date, lat_min, lat_max,
+                                                            lng_min, lng_max, gfed_files_folder=app.config['GFED_FILES_FOLDER'])
 
         # Get OpenMeteo Data
         open_meteo_df = get_open_meteo_data(lat_min, lat_max, lng_min, lng_max, start_date, end_date)
