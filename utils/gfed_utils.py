@@ -167,11 +167,11 @@ def get_gfed_burned_area_fraction_for_range(start_date:date, end_date:date, lat_
         a dataframe containing data about burned area fraction and emissions fraction for each month and position within the range
     """
 
-    geo_pos_df:pd.DataFrame = None
-    time_df:pd.DataFrame = None
-    gfed_df:pd.DataFrame = None
+    geo_pos_df = pd.DataFrame()
+    time_df = pd.DataFrame()
+    gfed_df = pd.DataFrame()
 
-    for year in range(start_date.year, end_date.year): # Iterate in years
+    for year in range(start_date.year, end_date.year+1): # Iterate in years
 
         month_min = start_date.month if year == start_date.year else 1 # Begin with the start_date month if it's the first year iteration
         month_max = end_date.month if year == end_date.year else 12 # End with the end_date month if reached (the last year iteration)
@@ -180,17 +180,17 @@ def get_gfed_burned_area_fraction_for_range(start_date:date, end_date:date, lat_
         if not(os.path.isfile(file_path)): # If the file doesn't exist locally
             fetch_gfed_data_for_year(year) # Fetch GFED data file for the year
 
-        for month in range(month_min, month_max): # Iterate in months
+        for month in range(month_min, month_max+1): # Iterate in months
             temp_gfed_df = gfed_portioner(f"gfed_data_{year}.hdf5", month, lat_min, lat_max, lng_min, lng_max) # Get data in the geographical range
             temp_gfed_df.insert(2, 'month', month) # Add a month column
             temp_gfed_df.insert(3, 'year', year) # Add a year column
 
             # Set the geographical positions dataframe
-            if geo_pos_df == None:
+            if geo_pos_df.empty:
                 geo_pos_df = temp_gfed_df[['latitude', 'longitude']]
 
             # Concatenate produced dataframes for time data (month/year)
-            if time_df == None:
+            if time_df.empty:
                 time_df = pd.DataFrame({
                     'month': month,
                     'year': year
@@ -203,7 +203,7 @@ def get_gfed_burned_area_fraction_for_range(start_date:date, end_date:date, lat_
                 time_df = pd.concat([time_df, temp_time_df], ignore_index=True)
 
             # Concatenate produced dataframes for gfed data
-            if gfed_df == None:
+            if gfed_df.empty:
                 gfed_df = temp_gfed_df
             else:
                 gfed_df = pd.concat([gfed_df, temp_gfed_df], ignore_index=True)

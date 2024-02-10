@@ -3,7 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime as dt
 
-def get_dataset_with_fire_indexes(ds:pd.DataFrame, time_name="time", time_format="%Y%m%d", temp_name="T",
+def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="time", time_format="%Y%m%d", temp_name="T",
                                   precip_name="P", hum_name="H", wind_name="U", temp_meteo_folder=".") -> pd.DataFrame:
     """
     Adds fire indexes (ffmc, dmc, dc, isi, bui and fwi) to a specified dataset that has to include 
