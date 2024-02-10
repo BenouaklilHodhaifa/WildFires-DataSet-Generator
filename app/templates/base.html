@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WildFires Dataset Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="body-container">
+        <div class="navbar">
+            <div class="navbar-part">
+                <img src="{{url_for('static', filename='db_icon.png')}}" alt="DB Icon">
+                <p><span>WildFires</span> Dataset Generator</p>
+            </div>
+            <div class="navbar-part">
+                <a href="https://github.com/BenouaklilHodhaifa/WildFires-DataSet-Generator" target="_blank">Github</a>
+                <a href="https://github.com/BenouaklilHodhaifa/WildFires-DataSet-Generator" target="_blank">About</a>
+            </div>
+        </div>
+        <div class="content">
+            <div class="content-left">
+                <p class="content-title">Generate Your WildFires <span>Data</span></p>
+                <p class="content-description">To generate WildFires data, you must set a geographical range by limiting latitude and longitude coordinates and 
+                    also a time range by setting a start date and an end date.
+                </p>
+                <div class="inputs">
+                    <p>Geographical Range</p>
+                    <div class="inputs-group">
+                        <div class="form__group field">
+                            <input type="number" class="form__field" placeholder="0">
+                            <label for="lat_min" class="form__label">Latitude Min</label>
+                        </div>
+                        <div class="form__group field">
+                            <input type="number" class="form__field" placeholder="Latitude Max">
+                            <label for="lat_max" class="form__label">Latitude Max</label>
+                        </div>
+                        <div class="form__group field">
+                            <input type="number" class="form__field" placeholder="Longitude Min">
+                            <label for="lng_min" class="form__label">Longitude Min</label>
+                        </div>
+                        <div class="form__group field">
+                            <input type="number" class="form__field" placeholder="Longitude Max">
+                            <label for="lng_max" class="form__label">Longitude Max</label>
+                        </div>
+                    </div>
+                    <p>Time Range</p>
+                    <div class="inputs-group">
+                        <div class="form__group field">
+                            <input type="date" class="form__field" placeholder="Start Date">
+                            <label for="start_date" class="form__label">Start Date</label>
+                        </div>
+                        <div class="form__group field">
+                            <input type="date" class="form__field" placeholder="End Date">
+                            <label for="end_date" class="form__label">End Date</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="content-right">
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

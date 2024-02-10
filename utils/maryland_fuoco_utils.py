@@ -119,8 +119,9 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
         local_path = os.path.join(daily_burned_area_folder, f"daily_burned_area_{d.day}_{d.month}_{d.year}.hdf")
 
         if os.path.isfile(local_path):
-            database = SD(local_path, SDC.READ) # read the hdf file
-            earth_map = database.select('BurnedArea').get() # get data from burned area database 
+            local_file = SD(local_path, SDC.READ) # Read the hdf file
+            database = local_file.select('BurnedArea') # Open the burned area database
+            earth_map = database.get() # get data from the database
 
             # Transform data into a dataframe
             temp_df = pd.DataFrame(
@@ -139,5 +140,9 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
                 df = temp_df
             else:
                 df = pd.concat([df, temp_df], ignore_index=True)
+
+            # Close database and file
+            database.endaccess()
+            local_file.end()
 
     return df

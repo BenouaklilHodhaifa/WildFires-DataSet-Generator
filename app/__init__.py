@@ -9,15 +9,19 @@ db = SQLAlchemy()
 def create_app():
     load_dotenv()
 
-    app = Flask("WildFires_Dataset_Generator")  # Naming our application
+    app = Flask("WildFires_Dataset_Generator", template_folder='app/templates', static_folder='app/static')  # Naming our application
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
     app.config['TEMP_METEO_FOLDER'] = 'data/meteo'
     app.config['GFED_FILES_FOLDER'] = 'data/gfed'
-    # app.config['PAGINATION_PER_PAGE'] = 5
     CORS(app)
     
     db.init_app(app)
 
+    # Main routes
+    from app.services.main.routes import bp as main_bp
+    app.register_blueprint(main_bp, url_prefix="/")
+
+    # Datasets routes
     from app.services.datasets.routes import bp as datasets_bp
     app.register_blueprint(datasets_bp, url_prefix="/datasets")
 

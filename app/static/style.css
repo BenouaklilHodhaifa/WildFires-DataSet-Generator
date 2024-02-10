@@ -1,0 +1,168 @@
+/* ============================= Body ===============================*/
+
+html{
+    height: 100%;
+    margin: 0;
+}
+
+body{
+    background-color: #EEEEEE;
+    font-family: 'Poppins', sans-serif;
+    height: 100%;
+    margin: 0;
+    color: black;
+}
+
+.body-container {
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+}
+
+/* ============================= Navbar ===============================*/
+
+.navbar{
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    flex: 0 1 auto;
+    padding: 10px;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.05) 0px 4px 6px -2px;
+}
+
+.navbar-part{
+    display: flex;
+    align-items: center;
+}
+
+.navbar p{
+    margin: 0;
+}
+
+.navbar span{
+    font-weight: 600;
+}
+
+.navbar img{
+    width: 50px;
+    height: auto;
+    margin-right: 5px;
+}
+
+.navbar a{
+    margin-left: 15px;
+    margin-right: 15px;
+    text-decoration: none;
+    color: #454545;
+}
+
+/* ======================================== Content ===========================================*/
+
+.content{
+    display: flex;
+    flex: 1 1 auto;
+}
+
+/* ========================== Content Left ==========================*/
+
+.content-left{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+}
+
+.content-title{
+    font-size: 2em;
+    font-weight: 600;
+    margin:0;
+    margin-left: 20px;
+    margin-bottom: 10px;
+}
+
+.content-title span{
+    color: #EB6325;
+}
+
+.content-description{
+    margin:0;
+    margin-left: 20px;
+}
+
+.content-right{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+}
+
+.inputs p{
+    font-size: 1.3em;
+    font-weight: 600;
+    text-decoration: underline;
+    margin: 20px 0 10px 20px;
+}
+
+.inputs-group{
+    display: flex;
+}
+
+/* ================= TextInputs ==================== */
+
+.form__group {
+    position: relative;
+    padding: 20px 20px 0;
+}
+  
+.form__field {
+    font-family: inherit;
+    border: none;
+    border-bottom: 2px solid #454545;
+    outline: 0;
+    padding: 7px 0;
+    background: transparent;
+    transition: border-color 0.2s;
+}
+
+.form__field::placeholder {
+    color: transparent;
+}
+
+.form__field:placeholder-shown ~ .form__label {
+    cursor: text;
+    top: 20px;
+}
+
+.form__label {
+    position: absolute;
+    top: 0;
+    display: block;
+    transition: 0.2s;
+    color: #454545;
+    pointer-events: none;
+}
+
+.form__field:focus {
+    padding-bottom: 6px;
+    font-weight: 700;
+    border-width: 3px;
+    border-image: linear-gradient(to right, #d55a22, #EB6325);
+    border-image-slice: 1;
+}
+
+.form__field:focus ~ .form__label {
+    position: absolute;
+    top: 0;
+    display: block;
+    transition: 0.2s;
+    color: #EB6325;
+    font-weight: 700;
+}
+
+/* reset input */
+.form__field:required, .form__field:invalid {
+    box-shadow: none;
+}
