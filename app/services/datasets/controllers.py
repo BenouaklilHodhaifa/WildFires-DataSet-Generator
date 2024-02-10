@@ -1,9 +1,7 @@
 from flask import request
 from datetime import date
-from utils.gfed_utils import get_gfed_burned_area_fraction_for_range
-from utils.open_meteo_utils import get_data as get_open_meteo_data
 from app import db
-from flask import jsonify, current_app as app
+from flask import jsonify, make_response, current_app as app
 from sqlalchemy import text
 import pandas as pd
 
@@ -12,23 +10,10 @@ def populate():
     try:
         start_date = date.fromisoformat(request.args.get("start_date"))
         end_date = date.fromisoformat(request.args.get("start_date"))
-        lng_min = request.args.get("lng_min")
-        lng_max = request.args.get("lng_max")
         lat_min = request.args.get("lat_min")
         lat_max = request.args.get("lng_max")
-
-        # Get GFED Data
-        geo_pos_df, time_df, gfed_df = get_gfed_burned_area_fraction_for_range(start_date, end_date, lat_min, lat_max,
-                                                            lng_min, lng_max, gfed_files_folder=app.config['GFED_FILES_FOLDER'])
-
-        # Get OpenMeteo Data
-        open_meteo_df = get_open_meteo_data(lat_min, lat_max, lng_min, lng_max, start_date, end_date)
-
-        with db.engine.connect() as connection:
-            connection.execute(text(f"INSERT INTO positions VALUES {",".join([f"({",".join(map(str, r))})" for r in geo_pos_df.values])}"))
-            connection.execute(text(f"INSERT INTO dates VALUES {",".join([f"({",".join(map(str, r))})" for r in time_df.values])}"))
-            connection.execute(text(f"INSERT INTO gfed_data VALUES {",".join([f"({",".join(map(str, r))})" for r in gfed_df.values])}"))
-            connection.execute(text(f"INSERT INTO meteo VALUES {",".join([f"({",".join(map(str, r))})" for r in open_meteo_df.values])}"))
+        lng_min = request.args.get("lng_min")
+        lng_max = request.args.get("lng_max")
 
         return jsonify({
             "message": "Database populated successfully"
@@ -44,10 +29,16 @@ def populate():
 def query():
     """User route controller for getting requested data"""
     try:
-        connection = db.engine.connect()
-        df = pd.read_sql("SELECT * FROM gfed_data", connection)
-        pd.read_hdf()
+        connection = db.engine.connect() # Connect to database
+        df = pd.read_sql("SELECT * FROM wildfires_data", connection) # Query data
 
+        # Serve data read as a csv file
+        resp = make_response(df.to_csv())
+        resp.headers["Content-Disposition"] = "attachment; filename=export.csv"
+        resp.headers["Content-Type"] = "text/csv"
+
+        return resp
+    
     except Exception as e:
         return jsonify({
             "message": "Server Error",
@@ -56,4 +47,21 @@ def query():
 
 def limits():
     """User route controller for getting limits of data"""
-    pass
+    try:
+        # Connect to database
+        connection = db.engine.connect()
+        # Get limits of data
+        res = connection.execute("SELECT MIN(latitude), MAX(latitude), MIN(longitude), MAX(longitude), MIN(date), MAX(date) from wildfires_data")
+        return jsonify({
+            "lat_min": res[0],
+            "lat_max": res[1],
+            "lng_min": res[2],
+            "lng_max": res[3],
+            "date_min": res[4],
+            "date_max": res[5]
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "message": "Server Error",
+            "error": str(e)
+        }), 500
