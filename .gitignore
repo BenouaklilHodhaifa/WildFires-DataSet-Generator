@@ -3,3 +3,6 @@
 venv/
 app/files/open_meteo/*
 .env
+data/fuoco/*
+data/gfed/*
+data/meteo/*
