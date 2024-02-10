@@ -6,7 +6,7 @@ from fire_index_utils import get_dataset_with_fire_indexes
 
 def get_data(lat_min:float, lat_max:float, lon_min:float, lon_max:float, start_date:str, end_date:str)->pd.DataFrame:
     """
-    This function returns the dataSet for fire prediction for a specific geographical span and start date and end date 
+    This function returns the dataSet of the needed meteorogical data within a specific geographical span and between a start date and end date 
 
     Parameters:
     -----------
@@ -91,5 +91,4 @@ def get_data(lat_min:float, lat_max:float, lon_min:float, lon_max:float, start_d
     
     df = pd.DataFrame(meteo_data)
 
-    df = get_dataset_with_fire_indexes(df)
     return df
