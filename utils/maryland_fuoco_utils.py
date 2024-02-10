@@ -59,18 +59,17 @@ def fetch_daily_burned_area(start_date:date, end_date:date, daily_burned_area_fo
         connection = pysftp.Connection(host=HOST, username=USER_NAME, password=PWD, port=PORT, cnopts=cnopts)
 
         # Download files from the server
-        for year in range(start_date.year, end_date.year+1): # Iterate over years
-            with connection.cd(f'data/GFED/GFED4/daily/{year}'):
-                files = connection.listdir() # Get all files names in directory
-                for file in files: # Iterate over files
-                    file_day_in_year = int(file.split('_')[-2][-3:]) # Get the day corresponding to the file Ex : In 'GFED4.0_DQ_2015001_BA.hdf' it's 1
-                    file_date = date(year, 1, 1) + timedelta(file_day_in_year - 1) # Converting (year, day in year) to complete date (year, month, day)
-
-                    # Generate a local path for the data file
-                    local_path = os.path.join(daily_burned_area_folder, f'daily_burned_area_{file_date.day}_{file_date.month}_{file_date.year}.hdf')
-                    # Check if the data file doesn't exist already and if the date is within the time range specified
-                    if not(os.path.isfile(local_path)) and file_date >= start_date and file_date <= end_date:
-                        connection.get(remotepath=file, localpath=local_path) # Download the file in the generated local path
+        for d in date_iterator(start_date, end_date): # Iterate over days
+            # Generate a local path for the data file
+            local_path = os.path.join(daily_burned_area_folder, f'daily_burned_area_{d.day}_{d.month}_{d.year}.hdf')
+            if not(os.path.isfile(local_path)): # Check if it's not already downloaded
+                # Get the remote path of the data file
+                day_in_year = (d - date(d.year, 1, 1)).days + 1 # Get the day number in the year from the complete date (year, month, day) 
+                remote_path = f"data/GFED/GFED4/daily/{d.year}/GFED4.0_DQ_{d.year}{str(day_in_year).zfill(3)}_BA.hdf"
+                
+                # Check if the remote path exists in the server
+                if connection.isfile(remote_path):
+                    connection.get(remotepath=remote_path, localpath=local_path) # Download the file in the generated local path
         
         connection.close() # Close the connection
 
@@ -118,7 +117,7 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
     for d in date_iterator(start_date, end_date):
         # Get the local path to read data from
         local_path = os.path.join(daily_burned_area_folder, f"daily_burned_area_{d.day}_{d.month}_{d.year}.hdf")
-        
+
         if os.path.isfile(local_path):
             database = SD(local_path, SDC.READ) # read the hdf file
             earth_map = database.select('BurnedArea').get() # get data from burned area database 
