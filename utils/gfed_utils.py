@@ -211,6 +211,7 @@ def get_gfed_burned_area_fraction_for_range(start_date:date, end_date:date, lat_
     return geo_pos_df, time_df, gfed_df
 
 
+
 def gfed_modular_portioner(earth_map:np.ndarray, output_column_name:str, lat_min: float, lat_max: float, lng_min: float, lng_max: float) -> pd.DataFrame:
     """
     This function receives as input:
@@ -246,50 +247,26 @@ def gfed_modular_portioner(earth_map:np.ndarray, output_column_name:str, lat_min
     df.index.set_names(names="longitude", level=1, inplace=True)
     df = df.reset_index(name=output_column_name)
     # df.insert(2, 'Was burnt', (df['Burnt %'] != 0).astype(int))
-    df.insert(0, 'y', ((90 - df['Latitude']) * 4).astype(int))
-    df.insert(1, 'x', ((df['Longitude'] + 180) * 4).astype(int))
+    df.insert(0, 'y', ((90 - df['latitude']) * 4).astype(int))
+    df.insert(1, 'x', ((df['longitude'] + 180) * 4).astype(int))
 
     return df
 
+def date_iterator(start_date:date, end_date:date):
+    delta = timedelta(days=1)
+    current_date = start_date
+    while(current_date <= end_date):
+        yield current_date
+        current_date = current_date + delta
+
 
 def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, gfed_files_folder=".") ->pd.DataFrame:
-    """Gets data from GFED official open data of emissions for a specified range in time and space (geographical space) then 
-    returns a dataframe containing data about burned area fraction and emissions fraction for each day and position within the range.
     
-    Parameters
-    ----------
-    start_date : date
-        start date of the time range.
-    end_date : date
-        end date of the time range.
-    lat_min : float
-        minimum bound of the latitude for the geographical range.
-    lat_max : float
-        maximum bound of the latitude for the geographical range.
-    lng_min : float
-        minimum bound of the longitude for the geographical range.
-    lng_max : float
-        maximum bound of the longitude for the geographical range.
-    gfed_files_folder : str
-        path of the folder where to store fetched files from GFED4 remote site.
-
-    Returns
-    -------
-    out : pandas.DataFrame
-        the generated dataframe
-    """
-    def date_iterator(start_date:date, end_date:date):
-        delta = timedelta(days=1)
-        current_date = start_date
-        while(current_date <= end_date):
-            yield current_date
-            current_date = current_date + delta
-    
-    final_emissions_df:pd.DataFrame = None
+    final_emissions_df:pd.DataFrame
+    first_time = True
 
     for year in range(start_date.year, end_date.year+1):
-        # preparing the file corresponding to the year
-        # i believe this should be in a separate module for respecting the ETL architecture + separation of concerns
+       
         file_path = os.path.join(gfed_files_folder, f"gfed_data_{year}.hdf5") # Path of the gfed data file for the current year
         if not(os.path.isfile(file_path)): # If the file doesn't exist locally
             fetch_gfed_data_for_year(year) # Fetch GFED data file for the year
@@ -308,15 +285,27 @@ def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:fl
         # opening the file
         file = h5py.File(file_path, 'r')
         
-        for d in date_iterator(local_start_date, local_end_date):
-            earth_map = np.array(file.get("emissions/"+str(d.month).zfill(2)+"/daily_fraction/day_"+str(d.day)))
-            temp_emissions_df = gfed_modular_portioner(f"gfed_data_{year}.hdf5", "emission", lat_min, lat_max, lng_min, lng_max) # Get data in the geographical range
-            temp_emissions_df.insert(2, 'day', d.day) # Add a day column
-            temp_emissions_df.insert(3, 'month', d.month) # Add a month column
-            temp_emissions_df.insert(4, 'year', d.year) # Add a year column
-        
-            if final_emissions_df == None:
+        for local_date in date_iterator(local_start_date, local_end_date):
+            #getting the daily fraction emissions
+            earth_map = np.array(file.get("emissions/"+str(local_date.month).zfill(2)+"/daily_fraction/day_"+str(local_date.day)))
+            temp_emissions_df = gfed_modular_portioner(earth_map, "fire_carbon_emission", lat_min, lat_max, lng_min, lng_max) # Get data in the geographical range
+            
+            #getting the total carbon emissions for the month
+            earth_map = np.array(file.get("emissions/"+str(local_date.month).zfill(2)+"/C"))
+            temp_carbon_df = gfed_modular_portioner(earth_map,"carbon", lat_min, lat_max, lng_min, lng_max)
+            
+            #mutliplying the daily fraction by the total emission to get the daily emission
+            temp_emissions_df["fire_carbon_emission"] = temp_emissions_df["fire_carbon_emission"] * temp_carbon_df["carbon"]    
+            
+            #precising the date
+            temp_emissions_df.insert(2, 'day', local_date.day) # Add a day column
+            temp_emissions_df.insert(3, 'month', local_date.month) # Add a month column
+            temp_emissions_df.insert(4, 'year', local_date.year) # Add a year column
+            
+            #adding the temporary dataframe to the final datafram
+            if first_time:
                 final_emissions_df = temp_emissions_df
+                first_time = False
             else:
                 final_emissions_df = pd.concat([final_emissions_df, temp_emissions_df], ignore_index=True)
 
