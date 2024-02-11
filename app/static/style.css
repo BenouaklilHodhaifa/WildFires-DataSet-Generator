@@ -175,13 +175,11 @@ body {
 
 .button-container{
     display: flex;
-    justify-content: center;
+    justify-content: start;
     width: 100%;
 }
 
 /* ================= Generate Button ================== */
-
-/* ====== State - Not Loading (Idle) ===== */
 
 .submit-button {
     display: flex;
@@ -194,9 +192,10 @@ body {
     border-radius: 0.8em;
     cursor: pointer;
     border: none;
-    background: linear-gradient(to right, #df8860, #EB6325);
+    background: #EB6325;
     color: ghostwhite;
     overflow: hidden;
+    margin-right: 10px;
 }
 
 .submit-button svg {
@@ -214,67 +213,7 @@ body {
     padding: 0.8em 1.2em 0.8em 1.05em;
 }
 
-.submit-button::before,
-.submit-button::after {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-}
-
-.submit-button::before {
-    content: "";
-    background: #000;
-    width: 120%;
-    left: -10%;
-    transform: skew(30deg);
-    transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1);
-}
-
-.submit-button:hover::before {
-    transform: translate3d(100%, 0, 0);
-}
-
 .submit-button:active {
-    transform: scale(0.95);
-}
-
-/* ====== State - Loading ===== */
-
-.submit-button-loading {
-    display: flex;
-    align-items: center;
-    position: relative;
-    font-family: inherit;
-    font-weight: 500;
-    font-size: 18px;
-    letter-spacing: 0.05em;
-    border-radius: 0.8em;
-    cursor: pointer;
-    border: none;
-    background: #EB6325;
-    color: ghostwhite;
-    overflow: hidden;
-}
-
-.submit-button-loading svg {
-    width: 1.2em;
-    height: 1.2em;
-    margin-right: 0.5em;
-}
-
-.submit-button-loading span {
-    position: relative;
-    z-index: 10;
-    transition: color 0.4s;
-    display: inline-flex;
-    align-items: center;
-    padding: 0.8em 1.2em 0.8em 1.05em;
-}
-
-.submit-button-loading:active {
     transform: scale(0.95);
 }
 
@@ -299,7 +238,7 @@ body {
 /* ============================ Download Button =============================== */
 
 .download-button {
-    display: none;
+    visibility: hidden;
     --width: 142px;
     --height: 58px;
     --tooltip-height: 35px;
@@ -309,11 +248,11 @@ body {
     --tooltip-color: #fff;
     width: var(--width);
     height: var(--height);
-    background: var(--button-color);
+    border: 3px var(--button-color) solid;
     position: relative;
     text-align: center;
     font-family: inherit;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 18px;
     letter-spacing: 0.05em;
     border-radius: 0.8em;
@@ -364,7 +303,7 @@ body {
     width: 100%;
     height: 100%;
     left: 0;
-    color: #fff;
+    color: var(--button-color);
   }
   
   .download-button .text {
@@ -376,7 +315,7 @@ body {
   }
   
   .download-button .icon {
-    color: #fff;
+    color: var(--button-color);
     top: 100%;
     display: flex;
     align-items: center;
@@ -386,10 +325,6 @@ body {
   .download-button .icon svg {
     width: 24px;
     height: 24px;
-  }
-  
-  .download-button:hover {
-    background: black;
   }
   
   .download-button:hover .text {

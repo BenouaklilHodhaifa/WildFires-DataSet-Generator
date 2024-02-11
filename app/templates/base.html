@@ -257,7 +257,6 @@
             // Change state of the button to loading
             document.getElementById('idle-content').style.visibility = 'hidden';
             document.getElementById('generate-button-loader').style.visibility = 'visible';
-            document.getElementById('generate-button').className = 'submit-button-loading';
 
             // Get markers positions (for the geographical range)
             latlng1 = marker1.getLatLng();
@@ -292,6 +291,7 @@
                     a.href = url; // Set the download local url
                     a.download = 'data.csv'; // Name the downloaded file
                     a.setAttribute('data-tooltip', `Size: ${humanFileSize(blob.size)}`); // Update the data tooltip with the file size
+                    a.style.visibility = 'visible'; // Make the download button visible
                 } else {
                     console.log(`Error code ${res.status}`);
                 }
@@ -302,11 +302,6 @@
             // Reset state of button to idle
             document.getElementById('idle-content').style.visibility = 'visible';
             document.getElementById('generate-button-loader').style.visibility = 'hidden';
-            document.getElementById('generate-button').className = 'submit-button';
-
-            // Hide generate button and replace it with download button
-            document.getElementById('generate-button').style.display = 'none';
-            document.getElementById('download-button').style.display = 'inline';
         }
     </script>
 </body>
