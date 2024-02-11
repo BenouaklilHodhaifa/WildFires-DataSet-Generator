@@ -58,19 +58,28 @@
                         <p>Time Range</p>
                         <div class="inputs-group">
                             <div class="form__group field">
-                                <input id="date_min" type="date" class="form__field" placeholder="Start Date">
+                                <input id="date_min" type="date" class="form__field" placeholder="Start Date" onchange="onChangeStartDate(this.value)">
                                 <label for="start_date" class="form__label">Start Date</label>
                             </div>
                             <div class="form__group field">
-                                <input id="date_max" type="date" class="form__field" placeholder="End Date">
+                                <input id="date_max" type="date" class="form__field" placeholder="End Date" onchange="onChangeEndDate(this.value)">
                                 <label for="end_date" class="form__label">End Date</label>
                             </div>
                         </div>
                     </div>
-                    <div class="submit-button-container">
-                        <button class="submit-button">
-                            <span>Generate</span>
+                    <div class="button-container">
+                        <button id="generate-button" class="submit-button" onclick="generateData()">
+                            <span id="idle-content">Generate</span>
+                            <div id="generate-button-loader"></div>
                         </button>
+                        <a id="download-button" class="download-button" data-tooltip="Size: 20 MB">
+                            <div class="download-button-wrapper">
+                                <div class="text">Download</div>
+                                <span class="icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="2em" height="2em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 0 0 4.561 21h14.878a2 2 0 0 0 1.94-1.515L22 17"></path></svg>
+                                </span>
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -80,15 +89,24 @@
         </div>
     </div>
     <script>
+        // =========================== Initialization ===================================
+
         // Getting the data limits to limit bounds of the map
         var limits = JSON.parse('{{limits | tojson}}')
         var date_min = new Date(limits.date_min);
         var date_max = new Date(limits.date_max);
         
+        // Util function to format dates
+        function format_date(date){
+            return `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+        }
+
         // Initialize time range inputs
-        document.getElementById("date_min").value = `${date_min.getFullYear()}-${date_min.getMonth().toString().padStart(2,'0')}-${date_min.getDate().toString().padStart(2,'0')}`;
-        document.getElementById("date_max").value = `${date_max.getFullYear()}-${date_max.getMonth().toString().padStart(2,'0')}-${date_max.getDate().toString().padStart(2,'0')}`;
+        document.getElementById("date_min").value = format_date(date_min);
+        document.getElementById("date_max").value = format_date(date_max);
         
+        // ================================== Map =======================================
+
         // Create the map
         var osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 			osmAttrib = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -111,7 +129,6 @@
         map.setZoom(optimalInitialZoom); // Set that zoom as an initial zoom
 
         // Area selection feature
-
         var marker1 = null;
         var marker2 = null;
         var selected_area = null;
@@ -127,7 +144,7 @@
         latlng1 = marker1.getLatLng();
         latlng2 = marker2.getLatLng();
 
-        // Initializev geographical range inputs
+        // Initialize geographical range inputs
         document.getElementById("lat_min").value = Math.min(latlng1.lat, latlng2.lat);
         document.getElementById("lat_max").value = Math.max(latlng1.lat, latlng2.lat);
         document.getElementById("lng_min").value = Math.min(latlng1.lng, latlng2.lng);
@@ -166,6 +183,8 @@
             updateSelectedArea();
         });
         
+        // =========================== Callback Functions ===================================
+
         // Callback functions for geographical range inputs
         function onChangeLatMin(value){
             latlng1 = marker1.getLatLng();
@@ -215,7 +234,80 @@
             updateSelectedArea();
         }
 
-        // Callback functions for time range inputs
+        // ========== Callback functions for time range inputs =========
+
+        function onChangeStartDate(value){
+
+        }
+
+        function onChangeEndDate(value){
+
+        }
+
+        // ========== Data Generation Callback functions ===========
+
+        // Util Function to format a file size in bytes to a human readable format
+        function humanFileSize(size) {
+            var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024));
+            return (size / Math.pow(1024, i)).toFixed(2) * 1 + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
+        }
+
+        // Callback function of the generate button
+        async function generateData(){
+            // Change state of the button to loading
+            document.getElementById('idle-content').style.visibility = 'hidden';
+            document.getElementById('generate-button-loader').style.visibility = 'visible';
+            document.getElementById('generate-button').className = 'submit-button-loading';
+
+            // Get markers positions (for the geographical range)
+            latlng1 = marker1.getLatLng();
+            latlng2 = marker2.getLatLng();
+            
+            // Send request to backend
+            try {
+                const res = await fetch("/datasets/query?" + new URLSearchParams({
+                    lat_min: Math.min(latlng1.lat, latlng2.lat),
+                    lat_max: Math.max(latlng1.lat, latlng2.lat),
+                    lng_min: Math.min(latlng1.lng, latlng2.lng),
+                    lng_max: Math.max(latlng1.lng, latlng2.lng),
+                    start_date: format_date(date_min),
+                    end_date: format_date(date_max)
+                }),
+                {
+                    method: 'get',
+                    headers: {
+                        'content-type': 'text/csv',
+                    }
+                });
+                
+                // If the request was successfull
+                if (res.status === 200) {
+                    // Get data as blob
+                    const blob = await res.blob();
+                    // Create a temporary URL for the Blob
+                    const url = window.URL.createObjectURL(blob);
+                    // Get the download button
+                    const a = document.getElementById('download-button');
+                    // Link it to the fetched file
+                    a.href = url; // Set the download local url
+                    a.download = 'data.csv'; // Name the downloaded file
+                    a.setAttribute('data-tooltip', `Size: ${humanFileSize(blob.size)}`); // Update the data tooltip with the file size
+                } else {
+                    console.log(`Error code ${res.status}`);
+                }
+            } catch (err) {
+                console.log(err);
+            }
+
+            // Reset state of button to idle
+            document.getElementById('idle-content').style.visibility = 'visible';
+            document.getElementById('generate-button-loader').style.visibility = 'hidden';
+            document.getElementById('generate-button').className = 'submit-button';
+
+            // Hide generate button and replace it with download button
+            document.getElementById('generate-button').style.display = 'none';
+            document.getElementById('download-button').style.display = 'inline';
+        }
     </script>
 </body>
 </html>

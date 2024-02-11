@@ -16,13 +16,7 @@ def query():
         end_date = date.fromisoformat(request.args['end_date'])
 
         connection = db.engine.connect() # Connect to database
-        print((
-            "SELECT * FROM wildfires_data "
-            f"WHERE (latitude BETWEEN {lat_min} AND {lat_max}) "
-            f"AND (longitude BETWEEN {lng_min} AND {lng_max}) "
-            f"AND (date BETWEEN {start_date.year}-{str(start_date.month).zfill(2)}-{str(start_date.day).zfill(2)} "
-            f"AND {end_date.year}-{str(end_date.month).zfill(2)}-{str(end_date.day).zfill(2)})"
-        ))
+        
         df = pd.read_sql(text((
             "SELECT * FROM wildfires_data "
             f"WHERE (latitude BETWEEN {lat_min} AND {lat_max}) "
