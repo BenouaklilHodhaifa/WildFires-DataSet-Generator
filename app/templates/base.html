@@ -95,6 +95,9 @@
         var limits = JSON.parse('{{limits | tojson}}')
         var date_min = new Date(limits.date_min);
         var date_max = new Date(limits.date_max);
+
+        var start_date = date_min; // By default the start date is the minimum date set by data limits
+        var end_date = date_max; // By default the end date is the maximum date set by data limits
         
         // Util function to format dates
         function format_date(date){
@@ -237,11 +240,11 @@
         // ========== Callback functions for time range inputs =========
 
         function onChangeStartDate(value){
-
+            start_date = new Date(value);
         }
 
         function onChangeEndDate(value){
-
+            end_date = new Date(value);
         }
 
         // ========== Data Generation Callback functions ===========
@@ -269,8 +272,8 @@
                     lat_max: Math.max(latlng1.lat, latlng2.lat),
                     lng_min: Math.min(latlng1.lng, latlng2.lng),
                     lng_max: Math.max(latlng1.lng, latlng2.lng),
-                    start_date: format_date(date_min),
-                    end_date: format_date(date_max)
+                    start_date: format_date(start_date),
+                    end_date: format_date(end_date)
                 }),
                 {
                     method: 'get',

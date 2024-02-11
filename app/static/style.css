@@ -389,8 +389,12 @@ body {
         margin-bottom: 40px;
     }
 
-    #map{
+    #map {
         height: 400px;
         width: 60%;
+    }
+
+    .button-container {
+        justify-content: center;
     }
 }
