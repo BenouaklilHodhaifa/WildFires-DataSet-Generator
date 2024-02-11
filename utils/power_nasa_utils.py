@@ -48,15 +48,15 @@ def fill_point_in_dict(point:dict, meteo_data:dict):
     
     # append the time 
     for elem in list(res['T2M'].keys()):
-        meteo_data['time'].append(elem)
+        meteo_data['date'].append(elem)
 
     for j in range (len(res['T2M'])):
         meteo_data['longitude'].append(point['geometry']['coordinates'][0])
         meteo_data['latitude'].append(point['geometry']['coordinates'][1])
-        meteo_data['temperature'].append(res['T2M'][meteo_data['time'][j]])
-        meteo_data['precipitation'].append(res['PRECIPITATIONCAL'][meteo_data['time'][j]])
-        meteo_data['wind_speed'].append(res['WS10M'][meteo_data['time'][j]])
-        meteo_data['air_humidity'].append(res['RH2M'][meteo_data['time'][j]])
+        meteo_data['temperature'].append(res['T2M'][meteo_data['date'][j]])
+        meteo_data['precipitation'].append(res['PRECIPITATIONCAL'][meteo_data['date'][j]])
+        meteo_data['wind_speed'].append(res['WS10M'][meteo_data['date'][j]])
+        meteo_data['air_humidity'].append(res['RH2M'][meteo_data['date'][j]])
 
 def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float)->pd.DataFrame:
     """
@@ -83,7 +83,7 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
     end_date = f"{end_date.year}{end_date.month}{end_date.day}"    
         
     meteo_data = {
-        'time': [],
+        'date': [],
         'latitude': [],
         'longitude': [],
         'temperature': [],

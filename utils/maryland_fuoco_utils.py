@@ -44,8 +44,8 @@ def fetch_daily_burned_area(start_date:date, end_date:date, daily_burned_area_fo
 
         # Download files from the server
         print("Fetching Data Files From SFTP Server ...")
-        for nb_day in tqdm(range(0, (end_date - start_date).days)): # Iterate over days
-            d = start_date + timedelta(days=nb_day)
+        for nb_days in tqdm(range(0, (end_date - start_date).days)): # Iterate over days
+            d = start_date + timedelta(days=nb_days)
             # Generate a local path for the data file
             local_path = os.path.join(daily_burned_area_folder, f'daily_burned_area_{d.day}_{d.month}_{d.year}.hdf')
             if not(os.path.isfile(local_path)): # Check if it's not already downloaded
@@ -101,8 +101,8 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
     df = pd.DataFrame() # Final Dataframe to be returned
 
     print("Reading HDF Files ...")
-    for nb_day in tqdm(range(0, (end_date - start_date).days)):
-        d = start_date + timedelta(days=nb_day)
+    for nb_days in tqdm(range(0, (end_date - start_date).days)):
+        d = start_date + timedelta(days=nb_days)
         # Get the local path to read data from
         local_path = os.path.join(daily_burned_area_folder, f"daily_burned_area_{d.day}_{d.month}_{d.year}.hdf")
 
@@ -121,7 +121,7 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
             temp_df = temp_df.stack()
             temp_df.index.set_names(names="longitude", level=1, inplace=True)
             temp_df = temp_df.reset_index(name="burned_area")
-            temp_df.insert(2, 'date', d)
+            temp_df.insert(2, 'date', pd.to_datetime(d))
 
             # Concatenate dataframes into one
             if df.empty:

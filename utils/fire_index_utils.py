@@ -3,8 +3,9 @@ import pandas as pd
 import os
 from datetime import datetime as dt
 import warnings
+import pandas as pd
 
-def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="time", time_format="%Y%m%d", temp_name="temperature",
+def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%Y%m%d", temp_name="temperature",
                                   precip_name="precipitation", hum_name="air_humidity", wind_name="wind_speed", temp_meteo_folder=".",
                                    warnings_action="ignore") -> pd.DataFrame:
     """
@@ -52,4 +53,9 @@ def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="time", time_format="%
         # Delete the temporary file
         os.remove(temp_file_name)
         # Return the dataset enriched with the new indexes added to it
-        return fire.to_dataframe()
+        df:pd.DataFrame = fire.to_dataframe()
+        # Insert date as column and remove it from index
+        df.insert(3, 'date', df.index)
+        df.set_index('Unnamed: 0', inplace=True, drop=True)
+
+        return df

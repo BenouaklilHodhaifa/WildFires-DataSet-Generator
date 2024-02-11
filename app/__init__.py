@@ -11,8 +11,6 @@ def create_app():
 
     app = Flask("WildFires_Dataset_Generator", template_folder='app/templates', static_folder='app/static')  # Naming our application
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-    app.config['TEMP_METEO_FOLDER'] = 'data/meteo'
-    app.config['GFED_FILES_FOLDER'] = 'data/gfed'
     CORS(app)
     
     db.init_app(app)

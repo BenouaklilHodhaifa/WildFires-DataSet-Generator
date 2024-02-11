@@ -9,6 +9,7 @@ from utils.power_nasa_utils import get_data as get_meteo_data
 from utils.fire_index_utils import get_data_with_fire_indexes
 from utils.maryland_fuoco_utils import get_data as get_burned_area_data
 from utils.gfed_utils import get_gfed_emissions_data_for_range as get_emissions_data
+import numpy as np
 
 # Connect to database
 def connect_to_database():
@@ -44,13 +45,23 @@ def execute_query(connection:mysql.connector.connection.MySQLConnection, query:s
         the specific MySQL connection.
     query : str
         the query to be executed.
+
+    Returns
+    -------
+    out : bool
+        True is the query executed successfully. False otherwise.
     """
+    status = False
     cursor = connection.cursor()
+
     try:
         cursor.execute(query)
         connection.commit()
+        status = True
     except Error as err:
         print(f"Error: '{err}'")
+
+    return status
 
 # Main Script
 if __name__ == "__main__":
@@ -92,4 +103,39 @@ if __name__ == "__main__":
     # Get data from burned area
     print("Fetching Burned Area Data ...")
     burned_area_df = get_burned_area_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max, daily_burned_area_folder="data/fuoco")
-    print(burned_area_df)
+
+    # Get emissions data
+    print("Fetching Emissions Data ...")
+    emissions_df = get_emissions_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max, gfed_files_folder="data/gfed")
+
+    # Join all data
+    meteo_burned_area_df = pd.merge(fire_indexes_df, burned_area_df, how="left", on=['latitude', 'longitude', 'date']) # Do the first join
+    del fire_indexes_df # Delete the meteo dataframe with fire indexes from memory as we don't need it anymore
+    del burned_area_df # Delete the burned area dataframe from memory as we don't need it anymore
+    df = pd.merge(meteo_burned_area_df, emissions_df, how="left", on=['latitude', 'longitude', 'date']) # Do the second and final merge
+    del meteo_burned_area_df # Delete the first merge dataframe from memory as we don't need it anymore
+    del emissions_df # Delete the emissions dataframe from memory as we don't need it anymore
+
+    # Add a last column to specify in the location was burnt or not (boolean)
+    df['burnt'] = df['burned_area'] > 0
+
+    # Transform date column to ISO Format
+    df['date'] = df['date'].map(lambda x: datetime.date(x))
+
+    # Replace Nan values with None
+    df.replace(np.nan, None, inplace=True)
+
+    # Connect to database
+    print("Connecting to Database ...")
+    connection = connect_to_database()
+
+    # Insert the generated dataframe to the database
+    print("Inserting into Database ...")
+    insert_values = [f"({','.join(map(lambda x: 'NULL' if x == None else f"'{str(x)}'", row))})" for row in df.values]
+    success = execute_query(connection, f"INSERT IGNORE INTO wildfires_data VALUES {','.join(insert_values)};")
+
+    # Print a final message
+    if success:
+        print("\nDatabase has been populated successfully !")
+    else:
+        print('\nAn error occured when executing the INSERT SQL query, check logs for more details.')

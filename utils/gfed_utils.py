@@ -7,6 +7,7 @@ import math
 import h5py
 import os
 from datetime import date, timedelta
+from tqdm import tqdm
 
 BASE_URL = "https://www.geo.vu.nl/~gwerf/GFED/GFED4/"
 MAX_YEAR = 2016  # the max year allowed in the API
@@ -41,7 +42,7 @@ def fetch_gfed_data_for_year(year:int, gfed_files_folder="."):
 
     remote_file_url = make_remote_GFED_file_url(year)
 
-    print('made remote file url: {}'.format(remote_file_url))
+    print('Getting remote file from: {}'.format(remote_file_url))
     request = requests.get(remote_file_url)
     # checking for the request status
     if request.status_code != 200: # if the request is not successful
@@ -178,7 +179,7 @@ def get_gfed_burned_area_fraction_for_range(start_date:date, end_date:date, lat_
 
         file_path = os.path.join(gfed_files_folder, f"gfed_data_{year}.hdf5") # Path of the gfed data file for the current year
         if not(os.path.isfile(file_path)): # If the file doesn't exist locally
-            fetch_gfed_data_for_year(year) # Fetch GFED data file for the year
+            fetch_gfed_data_for_year(year, gfed_files_folder=gfed_files_folder) # Fetch GFED data file for the year
 
         for month in range(month_min, month_max+1): # Iterate in months
             temp_gfed_df = gfed_portioner(f"gfed_data_{year}.hdf5", month, lat_min, lat_max, lng_min, lng_max) # Get data in the geographical range
@@ -247,8 +248,8 @@ def gfed_modular_portioner(earth_map:np.ndarray, output_column_name:str, lat_min
     df.index.set_names(names="longitude", level=1, inplace=True)
     df = df.reset_index(name=output_column_name)
     # df.insert(2, 'Was burnt', (df['Burnt %'] != 0).astype(int))
-    df.insert(0, 'y', ((90 - df['latitude']) * 4).astype(int))
-    df.insert(1, 'x', ((df['longitude'] + 180) * 4).astype(int))
+    # df.insert(0, 'y', ((90 - df['latitude']) * 4).astype(int))
+    # df.insert(1, 'x', ((df['longitude'] + 180) * 4).astype(int))
 
     return df
 
@@ -269,7 +270,7 @@ def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:fl
        
         file_path = os.path.join(gfed_files_folder, f"gfed_data_{year}.hdf5") # Path of the gfed data file for the current year
         if not(os.path.isfile(file_path)): # If the file doesn't exist locally
-            fetch_gfed_data_for_year(year) # Fetch GFED data file for the year
+            fetch_gfed_data_for_year(year, gfed_files_folder=gfed_files_folder) # Fetch GFED data file for the year
         
         #preparing the local_start_date and local_end_date for the current year
         if year == start_date.year:
@@ -285,7 +286,8 @@ def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:fl
         # opening the file
         file = h5py.File(file_path, 'r')
         
-        for local_date in date_iterator(local_start_date, local_end_date):
+        for nb_days in tqdm(range(0, (end_date - start_date).days)):
+            local_date = local_start_date + timedelta(days=nb_days)
             #getting the daily fraction emissions
             earth_map = np.array(file.get("emissions/"+str(local_date.month).zfill(2)+"/daily_fraction/day_"+str(local_date.day)))
             temp_emissions_df = gfed_modular_portioner(earth_map, "fire_carbon_emission", lat_min, lat_max, lng_min, lng_max) # Get data in the geographical range
@@ -298,9 +300,7 @@ def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:fl
             temp_emissions_df["fire_carbon_emission"] = temp_emissions_df["fire_carbon_emission"] * temp_carbon_df["carbon"]    
             
             #precising the date
-            temp_emissions_df.insert(2, 'day', local_date.day) # Add a day column
-            temp_emissions_df.insert(3, 'month', local_date.month) # Add a month column
-            temp_emissions_df.insert(4, 'year', local_date.year) # Add a year column
+            temp_emissions_df.insert(2, 'date', pd.to_datetime(local_date)) # Add the date column
             
             #adding the temporary dataframe to the final datafram
             if first_time:
