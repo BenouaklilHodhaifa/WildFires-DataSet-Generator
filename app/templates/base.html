@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="{{url_for('static', filename='db_icon.png')}}">
-    <title>WildFires Dataset Generator</title>
+    <title>Pyro ETL</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,7 @@
         <div class="navbar">
             <div class="navbar-part">
                 <img src="{{url_for('static', filename='db_icon.png')}}" alt="DB Icon">
-                <p><span>WildFires</span> Dataset Generator</p>
+                <p><span>Pyro</span> ETL (WildFires Dataset Generator)</p>
             </div>
             <div class="navbar-part">
                 <a href="https://github.com/BenouaklilHodhaifa/WildFires-DataSet-Generator" target="_blank">Github</a>
@@ -39,30 +39,30 @@
                         <p>Geographical Range</p>
                         <div class="inputs-group">
                             <div class="form__group field">
-                                <input type="number" class="form__field" placeholder="0">
+                                <input id="lat_min" type="number" class="form__field" placeholder="Latitude Min" onchange="onChangeLatMin(this.value)">
                                 <label for="lat_min" class="form__label">Latitude Min</label>
                             </div>
                             <div class="form__group field">
-                                <input type="number" class="form__field" placeholder="Latitude Max">
+                                <input id="lat_max" type="number" class="form__field" placeholder="Latitude Max" onchange="onChangeLatMax(this.value)">
                                 <label for="lat_max" class="form__label">Latitude Max</label>
                             </div>
                             <div class="form__group field">
-                                <input type="number" class="form__field" placeholder="Longitude Min">
+                                <input id="lng_min" type="number" class="form__field" placeholder="Longitude Min" onchange="onChangeLngMin(this.value)">
                                 <label for="lng_min" class="form__label">Longitude Min</label>
                             </div>
                             <div class="form__group field">
-                                <input type="number" class="form__field" placeholder="Longitude Max">
+                                <input id="lng_max" type="number" class="form__field" placeholder="Longitude Max" onchange="onChangeLngMax(this.value)">
                                 <label for="lng_max" class="form__label">Longitude Max</label>
                             </div>
                         </div>
                         <p>Time Range</p>
                         <div class="inputs-group">
                             <div class="form__group field">
-                                <input type="date" class="form__field" placeholder="Start Date">
+                                <input id="date_min" type="date" class="form__field" placeholder="Start Date">
                                 <label for="start_date" class="form__label">Start Date</label>
                             </div>
                             <div class="form__group field">
-                                <input type="date" class="form__field" placeholder="End Date">
+                                <input id="date_max" type="date" class="form__field" placeholder="End Date">
                                 <label for="end_date" class="form__label">End Date</label>
                             </div>
                         </div>
@@ -80,11 +80,142 @@
         </div>
     </div>
     <script>
-        var map = L.map('map').setView([51.505, -0.09], 13);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
+        // Getting the data limits to limit bounds of the map
+        var limits = JSON.parse('{{limits | tojson}}')
+        var date_min = new Date(limits.date_min);
+        var date_max = new Date(limits.date_max);
+        
+        // Initialize time range inputs
+        document.getElementById("date_min").value = `${date_min.getFullYear()}-${date_min.getMonth().toString().padStart(2,'0')}-${date_min.getDate().toString().padStart(2,'0')}`;
+        document.getElementById("date_max").value = `${date_max.getFullYear()}-${date_max.getMonth().toString().padStart(2,'0')}-${date_max.getDate().toString().padStart(2,'0')}`;
+        
+        // Create the map
+        var osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+			osmAttrib = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+			osm = L.tileLayer(osmUrl, {
+                attribution: osmAttrib
+            }),
+			bounds = new L.LatLngBounds(new L.LatLng(limits.lat_min, limits.lng_min), new L.LatLng(limits.lat_max, limits.lng_max));
+
+        var map = new L.map('map',{
+			center: bounds.getCenter(),
+            zoom: 5,
+			layers: [osm],
+			maxBounds: bounds,
+			maxBoundsViscosity: 0.75
+		});
+        
+        // Calculate the zoom that enable to show the entire area within bounds
+        var optimalInitialZoom = map.getBoundsZoom(bounds);
+        map.setMinZoom(optimalInitialZoom); // Limit the min zoom to that calculated zoom
+        map.setZoom(optimalInitialZoom); // Set that zoom as an initial zoom
+
+        // Area selection feature
+
+        var marker1 = null;
+        var marker2 = null;
+        var selected_area = null;
+        var ratio = (limits.lng_max - limits.lng_min) / (limits.lat_max - limits.lat_min); 
+        marker1 = L.marker([
+            (limits.lat_min + limits.lat_max)/2 - (limits.lat_max - limits.lat_min)/(10/ratio),
+            (limits.lng_min + limits.lng_max)/2 - (limits.lng_max - limits.lng_min)/10
+        ], {draggable:true}).addTo(map);
+        marker2 = L.marker([
+            (limits.lat_min + limits.lat_max)/2 + (limits.lat_max - limits.lat_min)/(10/ratio),
+            (limits.lng_min + limits.lng_max)/2 + (limits.lng_max - limits.lng_min)/10
+        ], {draggable:true}).addTo(map);
+        latlng1 = marker1.getLatLng();
+        latlng2 = marker2.getLatLng();
+
+        // Initializev geographical range inputs
+        document.getElementById("lat_min").value = Math.min(latlng1.lat, latlng2.lat);
+        document.getElementById("lat_max").value = Math.max(latlng1.lat, latlng2.lat);
+        document.getElementById("lng_min").value = Math.min(latlng1.lng, latlng2.lng);
+        document.getElementById("lng_max").value = Math.max(latlng1.lng, latlng2.lng);
+
+        selected_area = L.polygon([
+            [latlng1.lat, latlng1.lng],
+            [latlng1.lat, latlng2.lng],
+            [latlng2.lat, latlng2.lng],
+            [latlng2.lat, latlng1.lng]
+        ]).addTo(map);
+
+        // Update selection on marker drag operation
+        function updateSelectedArea(){
+            latlng1 = marker1.getLatLng();
+            latlng2 = marker2.getLatLng();
+            document.getElementById("lat_min").value = Math.min(latlng1.lat, latlng2.lat);
+            document.getElementById("lat_max").value = Math.max(latlng1.lat, latlng2.lat);
+            document.getElementById("lng_min").value = Math.min(latlng1.lng, latlng2.lng);
+            document.getElementById("lng_max").value = Math.max(latlng1.lng, latlng2.lng);
+            selected_area.setLatLngs([
+                [latlng1.lat, latlng1.lng],
+                [latlng1.lat, latlng2.lng],
+                [latlng2.lat, latlng2.lng],
+                [latlng2.lat, latlng1.lng]
+            ]);
+        }
+
+        // Drag event on marker1
+        marker1.on('drag', function (e) {
+            updateSelectedArea();
+        });
+        
+        // Drag event on marker2
+        marker2.on('drag', function (e) {
+            updateSelectedArea();
+        });
+        
+        // Callback functions for geographical range inputs
+        function onChangeLatMin(value){
+            latlng1 = marker1.getLatLng();
+            latlng2 = marker2.getLatLng();
+            if(latlng1.lat < latlng2.lat){
+                marker1.setLatLng([value, latlng1.lng]);
+            }
+            else{
+                marker2.setLatLng([value, latlng2.lng]);
+            }
+            updateSelectedArea();
+        }
+
+        function onChangeLatMax(value){
+            latlng1 = marker1.getLatLng();
+            latlng2 = marker2.getLatLng();
+            if(latlng1.lat > latlng2.lat){
+                marker1.setLatLng([value, latlng1.lng]);
+            }
+            else{
+                marker2.setLatLng([value, latlng2.lng]);
+            }
+            updateSelectedArea();
+        }
+
+        function onChangeLngMin(value){
+            latlng1 = marker1.getLatLng();
+            latlng2 = marker2.getLatLng();
+            if(latlng1.lng < latlng2.lng){
+                marker1.setLatLng([latlng1.lat, value]);
+            }
+            else{
+                marker2.setLatLng([latlng2.lat, value]);
+            }
+            updateSelectedArea();
+        }
+
+        function onChangeLngMax(value){
+            latlng1 = marker1.getLatLng();
+            latlng2 = marker2.getLatLng();
+            if(latlng1.lng > latlng2.lng){
+                marker1.setLatLng([latlng1.lat, value]);
+            }
+            else{
+                marker2.setLatLng([latlng2.lat, value]);
+            }
+            updateSelectedArea();
+        }
+
+        // Callback functions for time range inputs
     </script>
 </body>
 </html>
