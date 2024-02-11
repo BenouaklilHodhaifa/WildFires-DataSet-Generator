@@ -2,9 +2,11 @@ from firedanger import firedanger
 import pandas as pd
 import os
 from datetime import datetime as dt
+import warnings
 
-def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="time", time_format="%Y%m%d", temp_name="T",
-                                  precip_name="P", hum_name="H", wind_name="U", temp_meteo_folder=".") -> pd.DataFrame:
+def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="time", time_format="%Y%m%d", temp_name="temperature",
+                                  precip_name="precipitation", hum_name="air_humidity", wind_name="wind_speed", temp_meteo_folder=".",
+                                   warnings_action="ignore") -> pd.DataFrame:
     """
     Adds fire indexes (ffmc, dmc, dc, isi, bui and fwi) to a specified dataset that has to include 
     for each row: the day of the observation (time), the air temperature (°C), precipitation (mm), air humidity (%)
@@ -29,19 +31,25 @@ def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="time", time_format="%
         name of the column referring to the wind speed (m/s) of each observation. Default is "U".
     temp_meteo_folder : str
         path of the folder where to store temporary files made from meteo data
+    warnings_action : str
+        decides what action to do if there is warnings displaying. Default is "ignore". Set to None, if 
+        the warnings should be displayed. 
 
     Returns
     -------
     out : pandas.DataFrame
         the generated dataframe
     """
-    # Create a unique name for a temporary file
-    temp_file_name = os.path.join(temp_meteo_folder, f'temp{int(dt.now().timestamp())}.csv')
-    # Save the dataset to a the temporary file
-    ds.to_csv(temp_file_name)
-    # Create a firedanger instance
-    fire = firedanger(temp_file_name, time_name=time_name, time_format=time_format)
-    # Calculate fire indexes (ffmc, dmc, dc, isi, bui and fwi)
-    fire.calc_canadian_fwi(temp=temp_name, precip=precip_name, hum=hum_name, wind=wind_name)
-    # Return the dataset enriched with the new indexes added to it
-    return fire.to_dataframe()
+    with warnings.catch_warnings(action=warnings_action):
+        # Create a unique name for a temporary file
+        temp_file_name = os.path.join(temp_meteo_folder, f'temp{int(dt.now().timestamp())}.csv')
+        # Save the dataset to a the temporary file
+        ds.to_csv(temp_file_name)
+        # Create a firedanger instance
+        fire = firedanger(temp_file_name, time_name=time_name, time_format=time_format)
+        # Calculate fire indexes (ffmc, dmc, dc, isi, bui and fwi)
+        fire.calc_canadian_fwi(temp=temp_name, precip=precip_name, hum=hum_name, wind=wind_name)
+        # Delete the temporary file
+        os.remove(temp_file_name)
+        # Return the dataset enriched with the new indexes added to it
+        return fire.to_dataframe()

@@ -5,28 +5,12 @@ import os
 from pyhdf.SD import *
 import math
 import pandas as pd
+from tqdm import tqdm
 
 HOST = "fuoco.geog.umd.edu"
 USER_NAME = "fire"
-PWD = "burnt"
+PASSWORD = "burnt"
 PORT = 22
-
-def date_iterator(start_date:date, end_date:date):
-    """
-    Iterator that generates a range from start date to end date with a step of one day
-
-    Parameters
-    ----------
-    start_date : date
-        start date of the time range.
-    end_date : date
-        end date of the time range.
-    """
-    delta = timedelta(days=1)
-    current_date = start_date
-    while(current_date <= end_date):
-        yield current_date
-        current_date = current_date + delta
 
 def fetch_daily_burned_area(start_date:date, end_date:date, daily_burned_area_folder=".", warnings_action="ignore"):
     """
@@ -56,10 +40,12 @@ def fetch_daily_burned_area(start_date:date, end_date:date, daily_burned_area_fo
         cnopts.hostkeys = None
         
         # Open an SFTP connection
-        connection = pysftp.Connection(host=HOST, username=USER_NAME, password=PWD, port=PORT, cnopts=cnopts)
+        connection = pysftp.Connection(host=HOST, username=USER_NAME, password=PASSWORD, port=PORT, cnopts=cnopts)
 
         # Download files from the server
-        for d in date_iterator(start_date, end_date): # Iterate over days
+        print("Fetching Data Files From SFTP Server ...")
+        for nb_day in tqdm(range(0, (end_date - start_date).days)): # Iterate over days
+            d = start_date + timedelta(days=nb_day)
             # Generate a local path for the data file
             local_path = os.path.join(daily_burned_area_folder, f'daily_burned_area_{d.day}_{d.month}_{d.year}.hdf')
             if not(os.path.isfile(local_path)): # Check if it's not already downloaded
@@ -114,7 +100,9 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
 
     df = pd.DataFrame() # Final Dataframe to be returned
 
-    for d in date_iterator(start_date, end_date):
+    print("Reading HDF Files ...")
+    for nb_day in tqdm(range(0, (end_date - start_date).days)):
+        d = start_date + timedelta(days=nb_day)
         # Get the local path to read data from
         local_path = os.path.join(daily_burned_area_folder, f"daily_burned_area_{d.day}_{d.month}_{d.year}.hdf")
 

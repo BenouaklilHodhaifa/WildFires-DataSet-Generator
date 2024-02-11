@@ -5,27 +5,6 @@ from flask import jsonify, make_response, current_app as app
 from sqlalchemy import text
 import pandas as pd
 
-def populate():
-    """Admin route controller for populating the data from sources"""
-    try:
-        start_date = date.fromisoformat(request.args.get("start_date"))
-        end_date = date.fromisoformat(request.args.get("start_date"))
-        lat_min = request.args.get("lat_min")
-        lat_max = request.args.get("lng_max")
-        lng_min = request.args.get("lng_min")
-        lng_max = request.args.get("lng_max")
-
-        return jsonify({
-            "message": "Database populated successfully"
-        }), 200
-    
-    except Exception as e:
-        return jsonify({
-            "message": "Server Error",
-            "error": str(e)
-        }), 500
-
-
 def query():
     """User route controller for getting requested data"""
     try:
