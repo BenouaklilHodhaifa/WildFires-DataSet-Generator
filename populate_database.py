@@ -7,7 +7,7 @@ from datetime import datetime
 import pandas as pd
 from utils.power_nasa_utils import get_data as get_meteo_data
 from utils.fire_index_utils import get_data_with_fire_indexes
-from utils.maryland_fuoco_utils import get_data as get_burned_area_data
+from utils.maryland_fuoco_utils import get_daily_burned_area_data
 from utils.gfed_utils import get_gfed_emissions_data_for_range as get_emissions_data
 import numpy as np
 
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     
     # Get data from burned area
     print("Fetching Burned Area Data ...")
-    burned_area_df = get_burned_area_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max, daily_burned_area_folder="data/fuoco")
+    burned_area_df = get_daily_burned_area_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max, daily_burned_area_folder="data/fuoco")
 
     # Get emissions data
     print("Fetching Emissions Data ...")

@@ -286,7 +286,7 @@ def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:fl
         # opening the file
         file = h5py.File(file_path, 'r')
         
-        for nb_days in tqdm(range(0, (end_date - start_date).days)):
+        for nb_days in tqdm(range(0, (end_date - start_date).days + 1)):
             local_date = local_start_date + timedelta(days=nb_days)
             #getting the daily fraction emissions
             earth_map = np.array(file.get("emissions/"+str(local_date.month).zfill(2)+"/daily_fraction/day_"+str(local_date.day)))
