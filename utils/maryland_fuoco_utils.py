@@ -42,7 +42,7 @@ def fetch_daily_files(start_date:date, end_date:date, daily_burned_area_folder="
         cnopts.hostkeys = None
         
         # Open an SFTP connection
-        connection = pysftp.Connection(host=HOST, username=USER_NAME, password=PASSWORD, port=PORT, cnopts=cnopts)
+        connection = pysftp.Connection(host=HOST, username=USER_NAME, password=PASSWORD, port=PORT, cnopts=cnopts, log=False)
 
         # Create a range for the loop
         rng = range((end_date - start_date).days + 1)
