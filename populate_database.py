@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
 import os
-from datetime import datetime
+from datetime import datetime, date
 import pandas as pd
 from utils.power_nasa_utils import get_data as get_meteo_data
 from utils.fire_index_utils import get_data_with_fire_indexes
@@ -63,32 +63,31 @@ def execute_query(connection:mysql.connector.connection.MySQLConnection, query:s
 
     return status
 
-# Main Script
-if __name__ == "__main__":
-    # Get script args
-    parser=argparse.ArgumentParser()
+def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float):
+    """
+    Loads data into database for a specific geographical and time range.
 
-    parser.add_argument("--lat_min", help="Minimum latitude of the geographical range")
-    parser.add_argument("--lat_max", help="Maximum latitude of the geographical range")
-    parser.add_argument("--lng_min", help="Minimum longitude of the geographical range")
-    parser.add_argument("--lng_max", help="Maximum longitude of the geographical range")
-    parser.add_argument("--start_date", help="Start date of the time range in format dd/mm/yy")
-    parser.add_argument("--end_date", help="End date of the time range in format dd/mm/yy")
-
-    args=vars(parser.parse_args())
-
-    # Transform args
-    lat_min = float(args['lat_min'])
-    lat_max = float(args['lat_max'])
-    lng_min = float(args['lng_min'])
-    lng_max = float(args['lng_max'])
-    start_date = datetime.strptime(args['start_date'], "%d/%m/%Y").date()
-    end_date = datetime.strptime(args['end_date'], "%d/%m/%Y").date()
-
-    # Load env variables
-    load_dotenv()
-
-    # The presumed final dataframe
+    Parameters
+    ----------
+    start_date : date
+        start date of the time range.
+    end_date : date
+        end date of the time range.
+    lat_min : float
+        minimum bound of the latitude for the geographical range.
+    lat_max : float
+        maximum bound of the latitude for the geographical range.
+    lng_min : float
+        minimum bound of the longitude for the geographical range.
+    lng_max : float
+        maximum bound of the longitude for the geographical range.
+    
+    Returns
+    -------
+    out : pandas.DataFrame
+        the generated dataframe.
+    """
+    # The generated dataframe
     df: pd.DataFrame = None
 
     # Get meteo data
@@ -139,3 +138,47 @@ if __name__ == "__main__":
         print("\nDatabase has been populated successfully !")
     else:
         print('\nAn error occured when executing the INSERT SQL query, check logs for more details.')
+    
+    return df
+
+# Main Script
+if __name__ == "__main__":
+    # Get script args
+    parser=argparse.ArgumentParser()
+
+    parser.add_argument("--lat_min", help="Minimum latitude of the geographical range")
+    parser.add_argument("--lat_max", help="Maximum latitude of the geographical range")
+    parser.add_argument("--lng_min", help="Minimum longitude of the geographical range")
+    parser.add_argument("--lng_max", help="Maximum longitude of the geographical range")
+    parser.add_argument("--start_date", help="Start date of the time range in format dd/mm/yy")
+    parser.add_argument("--end_date", help="End date of the time range in format dd/mm/yy")
+    parser.add_argument("--nb_checkpoints_lat", help="Divides the geographical latitude range into the number of checkpoints specified and loads data to database at the end of each checkpoint")
+    parser.add_argument("--nb_checkpoints_lng", help="Divides the geographical longitude range into the number of checkpoints specified and loads data to database at the end of each checkpoint")
+
+    args=vars(parser.parse_args())
+
+    # Transform args
+    lat_min = float(args['lat_min'])
+    lat_max = float(args['lat_max'])
+    lng_min = float(args['lng_min'])
+    lng_max = float(args['lng_max'])
+    start_date = datetime.strptime(args['start_date'], "%d/%m/%Y").date()
+    end_date = datetime.strptime(args['end_date'], "%d/%m/%Y").date()
+    nb_checkpoints_lat = int(args['nb_checkpoints_lat']) if args['nb_checkpoints_lat'] != None else 1
+    nb_checkpoints_lng = int(args['nb_checkpoints_lng']) if args['nb_checkpoints_lng'] != None else 1
+
+    # Load env variables
+    load_dotenv()
+
+    # Load data to database by checkpoints
+    lat_step = (lat_max - lat_min) / nb_checkpoints_lat
+    lng_step = (lng_max - lng_min) / nb_checkpoints_lng
+    for i in range(nb_checkpoints_lat * nb_checkpoints_lng):
+        print(f"============= CheckPoint {i+1} ===============")
+        lat_index = i // nb_checkpoints_lat
+        lng_index = i - lat_index * nb_checkpoints_lat
+        temp_df = load_dataframe_to_db(start_date, end_date, lat_min + lat_index * lat_step,
+                                        lat_min + (lat_index + 1) * lat_step,
+                                        lng_min + lng_index * lng_step, 
+                                        lng_min + (lng_index + 1) * lng_step)
+        print(f"Total Progress : {"{:.2f}".format((i+1)/(nb_checkpoints_lat * nb_checkpoints_lng))} %")
