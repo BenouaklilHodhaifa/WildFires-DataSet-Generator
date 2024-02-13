@@ -63,7 +63,7 @@ def execute_query(connection:mysql.connector.connection.MySQLConnection, query:s
 
     return status
 
-def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float):
+def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, show_progress=False):
     """
     Loads data into database for a specific geographical and time range.
 
@@ -81,6 +81,8 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
         minimum bound of the longitude for the geographical range.
     lng_max : float
         maximum bound of the longitude for the geographical range.
+    show_progress: bool
+        if set to True shows a progress bar. Default is False.
     
     Returns
     -------
@@ -91,21 +93,21 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
     df: pd.DataFrame = None
 
     # Get meteo data
-    print("Fetching Meteo Data ...")
-    meteo_df = get_meteo_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max)
+    meteo_df = get_meteo_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max, show_progress=show_progress)
     
     # Get data with fire indexes
-    print("Calculating Fire Indexes ...")
+    if show_progress:
+        print("Calculating Fire Indexes ...")
     fire_indexes_df = get_data_with_fire_indexes(meteo_df, temp_meteo_folder="data/meteo")
     del meteo_df # Delete meteo dataframe from memory as we don't need it anymore
     
     # Get data from burned area
-    print("Fetching Burned Area Data ...")
-    burned_area_df = get_daily_burned_area_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max, daily_burned_area_folder="data/fuoco")
+    burned_area_df = get_daily_burned_area_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max,
+                                                 daily_burned_area_folder="data/fuoco", show_progress=show_progress)
 
     # Get emissions data
-    print("Fetching Emissions Data ...")
-    emissions_df = get_emissions_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max, gfed_files_folder="data/gfed")
+    emissions_df = get_emissions_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max,
+                                       gfed_files_folder="data/gfed", show_progress=show_progress)
 
     # Join all data
     meteo_burned_area_df = pd.merge(fire_indexes_df, burned_area_df, how="left", on=['latitude', 'longitude', 'date']) # Do the first join
@@ -125,21 +127,25 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
     df.replace(np.nan, None, inplace=True)
 
     # Connect to database
-    print("Connecting to Database ...")
+    if show_progress:
+        print("Connecting to Database ...")
     connection = connect_to_database()
 
     # Insert the generated dataframe to the database
-    print("Inserting into Database ...")
+    if show_progress:
+        print("Inserting into Database ...")
     insert_values = [f"({','.join(map(lambda x: 'NULL' if x == None else f"'{str(x)}'", row))})" for row in df.values]
     success = execute_query(connection, f"INSERT IGNORE INTO wildfires_data VALUES {','.join(insert_values)};")
 
     # Print a final message
-    if success:
-        print("\nDatabase has been populated successfully !")
-    else:
-        print('\nAn error occured when executing the INSERT SQL query, check logs for more details.')
+    if show_progress:
+        if success:
+            print("\nDatabase has been populated successfully !")
+        else:
+            print('\nAn error occured when executing the INSERT SQL query, check logs for more details.')
     
-    return df
+    # Delete the generated dataframe
+    del df
 
 # Main Script
 if __name__ == "__main__":
@@ -174,11 +180,11 @@ if __name__ == "__main__":
     lat_step = (lat_max - lat_min) / nb_checkpoints_lat
     lng_step = (lng_max - lng_min) / nb_checkpoints_lng
     for i in range(nb_checkpoints_lat * nb_checkpoints_lng):
-        print(f"============= CheckPoint {i+1} ===============")
+        # print(f"============= CheckPoint {i+1} ===============")
         lat_index = i // nb_checkpoints_lat
         lng_index = i - lat_index * nb_checkpoints_lat
         temp_df = load_dataframe_to_db(start_date, end_date, lat_min + lat_index * lat_step,
                                         lat_min + (lat_index + 1) * lat_step,
                                         lng_min + lng_index * lng_step, 
-                                        lng_min + (lng_index + 1) * lng_step)
+                                        lng_min + (lng_index + 1) * lng_step, show_progress=True)
         print(f"Total Progress : {"{:.2f}".format((i+1)/(nb_checkpoints_lat * nb_checkpoints_lng))} %")

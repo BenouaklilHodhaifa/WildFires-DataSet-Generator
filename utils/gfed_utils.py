@@ -261,12 +261,17 @@ def date_iterator(start_date:date, end_date:date):
         current_date = current_date + delta
 
 
-def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, gfed_files_folder=".") ->pd.DataFrame:
+def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, gfed_files_folder=".", show_progress=False) ->pd.DataFrame:
     
     final_emissions_df:pd.DataFrame
     first_time = True
 
-    for year in range(start_date.year, end_date.year+1):
+    # Create a range for the first loop
+    rng1 = range(start_date.year, end_date.year+1)
+    if show_progress:
+        rng1 = tqdm(range(start_date.year, end_date.year+1), desc='Fetching Emissions Data')
+
+    for year in rng1:
        
         file_path = os.path.join(gfed_files_folder, f"gfed_data_{year}.hdf5") # Path of the gfed data file for the current year
         if not(os.path.isfile(file_path)): # If the file doesn't exist locally
@@ -283,10 +288,15 @@ def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:fl
         else:
             local_end_date = date(year,12,31) # year  - december - 31st
         
-        # opening the file
+        # Opening the file
         file = h5py.File(file_path, 'r')
         
-        for nb_days in tqdm(range(0, (end_date - start_date).days + 1)):
+        # Creating range of the second loop
+        rng2 = range((end_date - start_date).days + 1)
+        if show_progress:
+            rng2 = tqdm(range((end_date - start_date).days + 1), desc=f'Fetching for year {year}')
+
+        for nb_days in rng2:
             local_date = local_start_date + timedelta(days=nb_days)
             #getting the daily fraction emissions
             earth_map = np.array(file.get("emissions/"+str(local_date.month).zfill(2)+"/daily_fraction/day_"+str(local_date.day)))

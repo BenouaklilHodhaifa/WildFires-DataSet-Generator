@@ -12,7 +12,7 @@ USER_NAME = "fire"
 PASSWORD = "burnt"
 PORT = 22
 
-def fetch_daily_files(start_date:date, end_date:date, daily_burned_area_folder=".", warnings_action="ignore"):
+def fetch_daily_files(start_date:date, end_date:date, daily_burned_area_folder=".", warnings_action="ignore", show_progress=False):
     """
     This function generates a "daily_burned_area.hdf" file that should be a copy of the GFED4
     data files in the GFED4 database hosted on the Maryland University SFTP server (fuoco) that correspond
@@ -30,6 +30,8 @@ def fetch_daily_files(start_date:date, end_date:date, daily_burned_area_folder="
     warnings_action : str
         decides what action to do if there is warnings displaying. Default is "ignore". Set to None, if 
         the warnings should be displayed. 
+    show_progress : bool
+        if set to True shows a progress bar. Default is False.
     """
 
     with warnings.catch_warnings(action=warnings_action):
@@ -42,9 +44,13 @@ def fetch_daily_files(start_date:date, end_date:date, daily_burned_area_folder="
         # Open an SFTP connection
         connection = pysftp.Connection(host=HOST, username=USER_NAME, password=PASSWORD, port=PORT, cnopts=cnopts)
 
+        # Create a range for the loop
+        rng = range((end_date - start_date).days + 1)
+        if show_progress:
+            rng = tqdm(range((end_date - start_date).days + 1), desc='Fetching Data Files From SFTP Server')
+        
         # Download files from the server
-        print("Fetching Data Files From SFTP Server ...")
-        for nb_days in tqdm(range(0, (end_date - start_date).days + 1)): # Iterate over days
+        for nb_days in rng: # Iterate over days
             d = start_date + timedelta(days=nb_days)
             # Generate a local path for the data file
             local_path = os.path.join(daily_burned_area_folder, f'daily_burned_area_{d.day}_{d.month}_{d.year}.hdf')
@@ -59,7 +65,8 @@ def fetch_daily_files(start_date:date, end_date:date, daily_burned_area_folder="
         
         connection.close() # Close the connection
 
-def get_daily_burned_area_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, daily_burned_area_folder="."):
+def get_daily_burned_area_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, daily_burned_area_folder=".",
+                               show_progress=False):
     """
     Gets data from Maryland University SFTP server (fuoco) open data of daily burned area for a specified range in time and space 
     (geographical space) then returns a dataframe containing data about burned area for each day and 
@@ -81,6 +88,8 @@ def get_daily_burned_area_data(start_date:date, end_date:date, lat_min:float, la
         maximum bound of the longitude for the geographical range.
     gfed_files_folder : str
         path of the folder from where to get GFED4 Fuoco files.
+    show_progress: bool
+        if set to True shows a progress bar. Default is False.
 
     Returns
     -------
@@ -89,7 +98,7 @@ def get_daily_burned_area_data(start_date:date, end_date:date, lat_min:float, la
     """
 
     # Fetch data file from server
-    fetch_daily_files(start_date, end_date, daily_burned_area_folder)
+    fetch_daily_files(start_date, end_date, daily_burned_area_folder, show_progress=show_progress)
 
     # Getting the x_min and x_max indexes
     x_min = math.floor((lng_min + 180) * 4)
@@ -100,8 +109,12 @@ def get_daily_burned_area_data(start_date:date, end_date:date, lat_min:float, la
 
     df = pd.DataFrame() # Final Dataframe to be returned
 
-    print("Reading HDF Files ...")
-    for nb_days in tqdm(range(0, (end_date - start_date).days + 1)):
+    # Creating a range for the loop
+    rng = range((end_date - start_date).days + 1)
+    if show_progress:
+        tqdm(range((end_date - start_date).days + 1), desc='Reading HDF Files')
+
+    for nb_days in rng:
         d = start_date + timedelta(days=nb_days)
         # Get the local path to read data from
         local_path = os.path.join(daily_burned_area_folder, f"daily_burned_area_{d.day}_{d.month}_{d.year}.hdf")

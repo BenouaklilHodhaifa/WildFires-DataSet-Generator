@@ -58,7 +58,7 @@ def fill_point_in_dict(point:dict, meteo_data:dict):
         meteo_data['wind_speed'].append(res['WS10M'][meteo_data['date'][j]])
         meteo_data['air_humidity'].append(res['RH2M'][meteo_data['date'][j]])
 
-def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float)->pd.DataFrame:
+def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, show_progress=False)->pd.DataFrame:
     """
     This function returns the dataSet of the needed meteorogical data within a specific geographical span and between a start date and end date 
 
@@ -76,6 +76,8 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
         minimum longitude of the geographical range.
     lng_max: float
         maximum longitude of the geographical range.
+    show_progress: bool
+        if set to True shows a progress bar. Default is False.
     """
 
     # Transform the dates into the required format
@@ -94,7 +96,12 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
 
     coordinates_array = coordinates_selecter(lat_min=lat_min, lat_max=lat_max, lng_max=lng_max, lng_min=lng_min)
 
-    for i in tqdm(range(len(coordinates_array))):
+    # Create a range for the loop
+    rng = range(len(coordinates_array))
+    if show_progress:
+        rng = tqdm(range(len(coordinates_array)), desc='Fetching Meteo Data')
+
+    for i in rng:
         data = get_point_weather(coordinates_array[i][0], coordinates_array[i][1], start_date, end_date)
         fill_point_in_dict(data, meteo_data)
 
