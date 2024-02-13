@@ -11,6 +11,10 @@ from utils.maryland_fuoco_utils import get_daily_burned_area_data
 from utils.gfed_utils import get_gfed_emissions_data_for_range as get_emissions_data
 import numpy as np
 import concurrent.futures
+import logging
+
+# Ignore logs from third-party modules (Change this line if you want to show all logs)
+logging.getLogger().setLevel(logging.CRITICAL)
 
 # Connect to database
 def connect_to_database():
@@ -31,7 +35,6 @@ def connect_to_database():
             passwd=os.environ['DATABASE_PASSWORD'],
             database=os.environ['DATABASE_NAME']
         )
-        print("MySQL Database connection successful")
     except Error as err:
         print(f"Error: '{err}'")
     return connection
@@ -201,7 +204,7 @@ if __name__ == "__main__":
                 print(f"Total Progress : {"{:.2f}".format(cpt*100/(nb_checkpoints_lat * nb_checkpoints_lng))} %")
     else:
         for i in range(nb_checkpoints_lat * nb_checkpoints_lng):
-            print(f"============= CheckPoint {i+1} ===============")
+            print(f"\n============= CheckPoint {i+1} ===============\n")
             lat_index = i // nb_checkpoints_lat
             lng_index = i - lat_index * nb_checkpoints_lat
             temp_df = load_dataframe_to_db(start_date, end_date, lat_min + lat_index * lat_step,

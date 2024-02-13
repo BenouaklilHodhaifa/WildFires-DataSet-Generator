@@ -109,12 +109,9 @@ def get_daily_burned_area_data(start_date:date, end_date:date, lat_min:float, la
 
     df = pd.DataFrame() # Final Dataframe to be returned
 
-    # Creating a range for the loop
-    rng = range((end_date - start_date).days + 1)
     if show_progress:
-        tqdm(range((end_date - start_date).days + 1), desc='Reading HDF Files')
-
-    for nb_days in rng:
+        print('Reading HDF Files ...')
+    for nb_days in range((end_date - start_date).days + 1):
         d = start_date + timedelta(days=nb_days)
         # Get the local path to read data from
         local_path = os.path.join(daily_burned_area_folder, f"daily_burned_area_{d.day}_{d.month}_{d.year}.hdf")

@@ -4,10 +4,6 @@ import os
 from datetime import datetime as dt
 import warnings
 import pandas as pd
-import logging
-
-# Ignore logs from firedanger module (Change this line if you want to show logs from that module)
-logging.getLogger('firedanger').setLevel(logging.CRITICAL)
 
 def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%Y%m%d", temp_name="temperature",
                                   precip_name="precipitation", hum_name="air_humidity", wind_name="wind_speed", temp_meteo_folder=".",
