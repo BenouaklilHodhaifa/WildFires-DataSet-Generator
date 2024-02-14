@@ -89,9 +89,6 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
     show_progress: str
         if set to shows progress of the loading pipeline. Can take a value from the 
         specific set ('none', 'all', 'meteo'). Default is none.
-    meteo_progress_bar_pos: int
-        set the position of the progress bar. if set to None, the position is set automaticly. 
-        Default is None.
     
     Returns
     -------
