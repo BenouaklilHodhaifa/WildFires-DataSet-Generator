@@ -12,6 +12,7 @@ from utils.gfed_utils import get_gfed_emissions_data_for_range as get_emissions_
 import numpy as np
 import concurrent.futures
 import logging
+from typing import Literal
 
 # Ignore logs from third-party modules (Change this line if you want to show all logs)
 logging.getLogger().setLevel(logging.CRITICAL)
@@ -67,7 +68,7 @@ def execute_query(connection:mysql.connector.connection.MySQLConnection, query:s
 
     return status
 
-def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, show_progress=False):
+def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, show_progress=Literal['none', 'all', 'meteo']):
     """
     Loads data into database for a specific geographical and time range.
 
@@ -85,8 +86,12 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
         minimum bound of the longitude for the geographical range.
     lng_max : float
         maximum bound of the longitude for the geographical range.
-    show_progress: bool
-        if set to True shows a progress bar. Default is False.
+    show_progress: str
+        if set to shows progress of the loading pipeline. Can take a value from the 
+        specific set ('none', 'all', 'meteo'). Default is none.
+    meteo_progress_bar_pos: int
+        set the position of the progress bar. if set to None, the position is set automaticly. 
+        Default is None.
     
     Returns
     -------
@@ -95,24 +100,25 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
     """
     # The generated dataframe
     df: pd.DataFrame = None
-
     # Get meteo data
-    meteo_df = get_meteo_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max, show_progress=show_progress)
+    meteo_df = get_meteo_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max, 
+                              show_progress=(show_progress=='meteo' or show_progress=='all'))
     
     # Get data with fire indexes
-    if show_progress:
+    if show_progress == 'all':
         print("Calculating Fire Indexes ...")
     fire_indexes_df = get_data_with_fire_indexes(meteo_df, temp_meteo_folder="data/meteo")
     del meteo_df # Delete meteo dataframe from memory as we don't need it anymore
     
     # Get data from burned area
     burned_area_df = get_daily_burned_area_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max,
-                                                 daily_burned_area_folder="data/fuoco", show_progress=show_progress)
+                                                 daily_burned_area_folder="data/fuoco", 
+                                                 show_progress=(show_progress=='all'))
 
     # Get emissions data
     emissions_df = get_emissions_data(start_date, end_date, lat_min, lat_max, lng_min, lng_max,
-                                       gfed_files_folder="data/gfed", show_progress=show_progress)
-
+                                       gfed_files_folder="data/gfed", 
+                                       show_progress=(show_progress=='all'))
     # Join all data
     meteo_burned_area_df = pd.merge(fire_indexes_df, burned_area_df, how="left", on=['latitude', 'longitude', 'date']) # Do the first join
     del fire_indexes_df # Delete the meteo dataframe with fire indexes from memory as we don't need it anymore
@@ -131,18 +137,18 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
     df.replace(np.nan, None, inplace=True)
 
     # Connect to database
-    if show_progress:
+    if show_progress == 'all':
         print("Connecting to Database ...")
     connection = connect_to_database()
 
     # Insert the generated dataframe to the database
-    if show_progress:
+    if show_progress == 'all':
         print("Inserting into Database ...")
     insert_values = [f"({','.join(map(lambda x: 'NULL' if x == None else f"'{str(x)}'", row))})" for row in df.values]
     success = execute_query(connection, f"INSERT IGNORE INTO wildfires_data VALUES {','.join(insert_values)};")
 
     # Print a final message
-    if show_progress:
+    if show_progress == 'all':
         if success:
             print("\nDatabase has been populated successfully !")
         else:
@@ -187,7 +193,7 @@ if __name__ == "__main__":
     lng_step = (lng_max - lng_min) / nb_checkpoints_lng
 
     if parallel:
-        cpt = 0 # NUmber of checkpoints passed (completed)
+        cpt = 0 # Number of checkpoints passed (completed)
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [] # Array to store future objects
             print(f"INFO: Running on {executor._max_workers} threads.")
@@ -197,7 +203,7 @@ if __name__ == "__main__":
                 futures.append(executor.submit(load_dataframe_to_db, start_date, end_date, lat_min + lat_index * lat_step,
                                                 lat_min + (lat_index + 1) * lat_step,
                                                 lng_min + lng_index * lng_step, 
-                                                lng_min + (lng_index + 1) * lng_step))
+                                                lng_min + (lng_index + 1) * lng_step, 'meteo'))
             
             for future in concurrent.futures.as_completed(futures):
                 cpt += 1
@@ -207,7 +213,7 @@ if __name__ == "__main__":
             print(f"\n============= CheckPoint {i+1} ===============\n")
             lat_index = i // nb_checkpoints_lat
             lng_index = i - lat_index * nb_checkpoints_lat
-            temp_df = load_dataframe_to_db(start_date, end_date, lat_min + lat_index * lat_step,
+            load_dataframe_to_db(start_date, end_date, lat_min + lat_index * lat_step,
                                             lat_min + (lat_index + 1) * lat_step,
                                             lng_min + lng_index * lng_step, 
                                             lng_min + (lng_index + 1) * lng_step, show_progress=True)
