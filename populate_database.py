@@ -213,5 +213,5 @@ if __name__ == "__main__":
             load_dataframe_to_db(start_date, end_date, lat_min + lat_index * lat_step,
                                             lat_min + (lat_index + 1) * lat_step,
                                             lng_min + lng_index * lng_step, 
-                                            lng_min + (lng_index + 1) * lng_step, show_progress=True)
+                                            lng_min + (lng_index + 1) * lng_step, show_progress='all')
             print(f"Total Progress : {"{:.2f}".format((i+1)*100/(nb_checkpoints_lat * nb_checkpoints_lng))} %")
