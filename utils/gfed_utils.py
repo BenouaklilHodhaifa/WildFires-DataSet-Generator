@@ -298,14 +298,14 @@ def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:fl
 
         for nb_days in rng2:
             local_date = local_start_date + timedelta(days=nb_days)
-            #getting the daily fraction emissions
+            # Getting the daily fraction emissions
             earth_map = np.array(file.get("emissions/"+str(local_date.month).zfill(2)+"/daily_fraction/day_"+str(local_date.day)))
-            if len(earth_map) > 0:
+            if earth_map != None and len(earth_map) > 0:
                 temp_emissions_df = gfed_modular_portioner(earth_map, "fire_carbon_emission", lat_min, lat_max, lng_min, lng_max) # Get data in the geographical range
                 
-                #getting the total carbon emissions for the month
+                # Getting the total carbon emissions for the month
                 earth_map = np.array(file.get("emissions/"+str(local_date.month).zfill(2)+"/C"))
-                if len(earth_map) > 0:
+                if earth_map != None and len(earth_map) > 0:
                     temp_carbon_df = gfed_modular_portioner(earth_map,"carbon", lat_min, lat_max, lng_min, lng_max)
                     
                     #mutliplying the daily fraction by the total emission to get the daily emission
