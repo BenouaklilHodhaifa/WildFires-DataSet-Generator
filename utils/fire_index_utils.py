@@ -43,7 +43,7 @@ def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%
     """
     with warnings.catch_warnings(action=warnings_action):
         # Create a unique name for a temporary file
-        temp_file_name = os.path.join(temp_meteo_folder, f'temp_{dt.now().isoformat().replace(':','_')}.csv')
+        temp_file_name = os.path.join(temp_meteo_folder, f"temp_{dt.now().isoformat().replace(':','_')}.csv")
         # Save the dataset to a the temporary file
         ds.to_csv(temp_file_name)
         # Create a firedanger instance

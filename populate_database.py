@@ -141,7 +141,9 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
     # Insert the generated dataframe to the database
     if show_progress == 'all':
         print("Inserting into Database ...")
-    insert_values = [f"({','.join(map(lambda x: 'NULL' if x == None else f"'{str(x)}'", row))})" for row in df.values]
+    #insert_values = [f"({','.join(map(lambda x: 'NULL' if x == None else f"'{str(x)}'", row))})" for row in df.values]
+    map_function = lambda x: 'NULL' if x == None else f"'{str(x)}'"
+    insert_values = [f"({','.join(map(map_function, row))})" for row in df.values]
     success = execute_query(connection, f"INSERT IGNORE INTO wildfires_data VALUES {','.join(insert_values)};")
 
     # Print a final message
@@ -210,7 +212,8 @@ if __name__ == "__main__":
             
             for future in concurrent.futures.as_completed(futures):
                 cpt += 1
-                print(f"Total Progress : {"{:.2f}".format(cpt*100/(nb_checkpoints_lat * nb_checkpoints_lng))} %")
+                #print(f"Total Progress : {"%.2f".format(cpt*100/(nb_checkpoints_lat * nb_checkpoints_lng))} %")
+                print(f"Total Progress : {cpt*100/(nb_checkpoints_lat * nb_checkpoints_lng)} %")
     else:
         for i in range(nb_checkpoints_lat * nb_checkpoints_lng * nb_checkpoints_date):
             print(f"\n============= CheckPoint {i+1} ===============\n")
@@ -224,4 +227,5 @@ if __name__ == "__main__":
                                             lat_min + (lat_index + 1) * lat_step,
                                             lng_min + lng_index * lng_step, 
                                             lng_min + (lng_index + 1) * lng_step, show_progress='all')
-            print(f"Total Progress : {"{:.2f}".format((i+1)*100/(nb_checkpoints_lat * nb_checkpoints_lng))} %")
+            #print(f"Total Progress : {"%.2f".format((i+1)*100/(nb_checkpoints_lat * nb_checkpoints_lng))} %")
+            print(f"Total Progress : {(i+1)*100/(nb_checkpoints_lat * nb_checkpoints_lng)} %")
