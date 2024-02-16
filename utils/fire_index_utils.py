@@ -41,21 +41,36 @@ def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%
     out : pandas.DataFrame
         the generated dataframe
     """
+
+
+    first_time = True
     with warnings.catch_warnings(action=warnings_action):
         # Create a unique name for a temporary file
         temp_file_name = os.path.join(temp_meteo_folder, f"temp_{dt.now().isoformat().replace(':','_')}.csv")
         # Save the dataset to a the temporary file
-        ds.to_csv(temp_file_name)
-        # Create a firedanger instance
-        fire = firedanger(temp_file_name, time_name=time_name, time_format=time_format)
-        # Calculate fire indexes (ffmc, dmc, dc, isi, bui and fwi)
-        fire.calc_canadian_fwi(temp=temp_name, precip=precip_name, hum=hum_name, wind=wind_name)
-        # Delete the temporary file
-        os.remove(temp_file_name)
-        # Return the dataset enriched with the new indexes added to it
-        df:pd.DataFrame = fire.to_dataframe()
-        # Insert date as column and remove it from index
-        df.insert(3, 'date', df.index)
-        df.set_index('Unnamed: 0', inplace=True, drop=True)
-
-        return df
+        unique_coords = ds[["latitude","longitude"]].drop_duplicates()
+        for _, coord in unique_coords.iterrows():
+            lat_condition = ds["latitude"]==coord[0]
+            lng_condition = ds["longitude"]==coord[1]
+            local_ds = ds[lat_condition & lng_condition]
+            local_ds.to_csv(temp_file_name)
+            # Create a firedanger instance
+            fire = firedanger(temp_file_name, time_name=time_name, time_format=time_format)
+            # Calculate fire indexes (ffmc, dmc, dc, isi, bui and fwi)
+            fire.calc_canadian_fwi(temp=temp_name, precip=precip_name, hum=hum_name, wind=wind_name)
+            
+            # Return the dataset enriched with the new indexes added to it
+            local_df:pd.DataFrame = fire.to_dataframe()
+            # Insert date as column and remove it from index
+            local_df.insert(3, 'date', local_df.index)
+            local_df.set_index('Unnamed: 0', inplace=True, drop=True)
+            
+            if first_time:
+                first_time = False
+                df = local_df
+            else:
+                df = pd.concat([df, local_df], ignore_index=True)
+    
+    # Delete the temporary file
+    os.remove(temp_file_name)
+    return df
