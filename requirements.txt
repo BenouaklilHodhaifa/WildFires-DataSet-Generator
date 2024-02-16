@@ -4,7 +4,6 @@ mysql-connector-python
 python-dotenv
 flask_cors
 numpy
-pandas==1.5.3
 requests
 h5py
 git+https://github.com/steidani/firedanger.git
