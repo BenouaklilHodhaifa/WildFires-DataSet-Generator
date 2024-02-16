@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import pandas as pd
 from utils.power_nasa_utils import get_data as get_meteo_data
 from utils.fire_index_utils import get_data_with_fire_indexes
@@ -167,6 +167,7 @@ if __name__ == "__main__":
     parser.add_argument("--end_date", help="End date of the time range in format dd/mm/yy")
     parser.add_argument("--nb_checkpoints_lat", help="Divides the geographical latitude range into the number of checkpoints specified and loads data to database at the end of each checkpoint")
     parser.add_argument("--nb_checkpoints_lng", help="Divides the geographical longitude range into the number of checkpoints specified and loads data to database at the end of each checkpoint")
+    parser.add_argument("--nb_checkpoints_date", help="Divides the time range into the number of checkpoints specified and loads data to database at the end of each checkpoint")
     parser.add_argument("--parallel", help="If set to 1, the process will be divided on the maximum number of threads available.")
 
     args=vars(parser.parse_args())
@@ -180,6 +181,7 @@ if __name__ == "__main__":
     end_date = datetime.strptime(args['end_date'], "%d/%m/%Y").date()
     nb_checkpoints_lat = int(args['nb_checkpoints_lat']) if args['nb_checkpoints_lat'] != None else 1
     nb_checkpoints_lng = int(args['nb_checkpoints_lng']) if args['nb_checkpoints_lng'] != None else 1
+    nb_checkpoints_date = int(args['nb_checkpoints_date']) if args['nb_checkpoints_date'] != None else 1
     parallel = bool(int(args["parallel"])) if args["parallel"] else False
 
     # Load env variables
@@ -188,16 +190,20 @@ if __name__ == "__main__":
     # Load data to database by checkpoints
     lat_step = (lat_max - lat_min) / nb_checkpoints_lat
     lng_step = (lng_max - lng_min) / nb_checkpoints_lng
+    date_step = (end_date - start_date).days / nb_checkpoints_date
 
     if parallel:
         cpt = 0 # Number of checkpoints passed (completed)
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [] # Array to store future objects
             print(f"INFO: Running on {executor._max_workers} threads.")
-            for i in range(nb_checkpoints_lat * nb_checkpoints_lng):
-                lat_index = i // nb_checkpoints_lat
-                lng_index = i - lat_index * nb_checkpoints_lat
-                futures.append(executor.submit(load_dataframe_to_db, start_date, end_date, lat_min + lat_index * lat_step,
+            for i in range(nb_checkpoints_lat * nb_checkpoints_lng * nb_checkpoints_date):
+                date_index = i % nb_checkpoints_date
+                temp_index = i // nb_checkpoints_date
+                lat_index = temp_index // nb_checkpoints_lat
+                lng_index = temp_index % nb_checkpoints_lat
+                futures.append(executor.submit(load_dataframe_to_db, start_date + timedelta(days=date_index*date_step), 
+                                                start_date + timedelta(days=(date_index+1)*date_step), lat_min + lat_index * lat_step,
                                                 lat_min + (lat_index + 1) * lat_step,
                                                 lng_min + lng_index * lng_step, 
                                                 lng_min + (lng_index + 1) * lng_step, 'meteo'))
@@ -206,11 +212,15 @@ if __name__ == "__main__":
                 cpt += 1
                 print(f"Total Progress : {"{:.2f}".format(cpt*100/(nb_checkpoints_lat * nb_checkpoints_lng))} %")
     else:
-        for i in range(nb_checkpoints_lat * nb_checkpoints_lng):
+        for i in range(nb_checkpoints_lat * nb_checkpoints_lng * nb_checkpoints_date):
             print(f"\n============= CheckPoint {i+1} ===============\n")
-            lat_index = i // nb_checkpoints_lat
-            lng_index = i - lat_index * nb_checkpoints_lat
-            load_dataframe_to_db(start_date, end_date, lat_min + lat_index * lat_step,
+            date_index = i % nb_checkpoints_date
+            temp_index = i // nb_checkpoints_date
+            lat_index = temp_index // nb_checkpoints_lat
+            lng_index = temp_index % nb_checkpoints_lat
+            load_dataframe_to_db(start_date + timedelta(days=date_index*date_step), 
+                                            start_date + timedelta(days=(date_index+1)*date_step), 
+                                            lat_min + lat_index * lat_step,
                                             lat_min + (lat_index + 1) * lat_step,
                                             lng_min + lng_index * lng_step, 
                                             lng_min + (lng_index + 1) * lng_step, show_progress='all')
