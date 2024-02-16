@@ -1,0 +1,4 @@
+name: pyro_venv
+dependencies:
+  - python
+  - pandas=1.5.3
