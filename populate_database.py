@@ -129,7 +129,7 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
     del emissions_df # Delete the emissions dataframe from memory as we don't need it anymore
 
     # Add a last column to specify in the location was burnt or not (boolean)
-    df['burnt'] = df['burned_area'] > 0
+    df['burnt'] = (df['burned_area'] > 0).astype(int)
 
     # Transform date column to ISO Format
     df['date'] = df['date'].map(lambda x: datetime.date(x))
