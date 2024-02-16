@@ -12,3 +12,4 @@ scipy
 pysftp
 tqdm
 python-dotenv
+pytest
