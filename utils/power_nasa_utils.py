@@ -106,5 +106,6 @@ def get_data(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_m
         fill_point_in_dict(data, meteo_data)
 
     df = pd.DataFrame(meteo_data)
+    df['date'] = pd.to_datetime(df['date'])
 
     return df

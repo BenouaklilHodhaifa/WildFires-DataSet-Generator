@@ -1,14 +1,30 @@
 from firedanger import firedanger
 import pandas as pd
 import os
-from datetime import datetime as dt
+from datetime import date, timedelta, datetime
 import warnings
 import pandas as pd
 from tqdm import tqdm
+import math
 
-def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%Y%m%d", temp_name="temperature",
+def convert_to_datetime(d:date):
+    """Converts a date to datetime.
+    
+    Parameters
+    ----------
+    d : date
+        entry in type date.
+
+    Returns
+    -------
+    out : datetime
+        converted into datetime
+    """
+    return datetime(d.year, d.month, d.day)
+
+def get_data_with_fire_indexes(ds:pd.DataFrame, start_date:date, end_date:date, time_name="date", time_format="%Y%m%d", temp_name="temperature",
                                   precip_name="precipitation", hum_name="air_humidity", wind_name="wind_speed", 
-                                  temp_meteo_folder=".", show_progress=False,
+                                  temp_meteo_folder=".", date_interval_size:int=None, show_progress=False,
                                    warnings_action="ignore") -> pd.DataFrame:
     """
     Adds fire indexes (ffmc, dmc, dc, isi, bui and fwi) to a specified dataset that has to include 
@@ -20,6 +36,10 @@ def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%
     ds : pandas.DataFrame
         dataset specified to work on. It has to include all required attributes to be able to calculate 
         fire indexes.
+    start_date : date
+        start date of the time range.
+    end_date : date
+        end date of the time range.
     time_name : str
         name of the column referring to the time (day) of each observation. Default is "time".
     time_format : str
@@ -34,6 +54,10 @@ def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%
         name of the column referring to the wind speed (m/s) of each observation. Default is "U".
     temp_meteo_folder : str
         path of the folder where to store temporary files made from meteo data
+    date_interval_size : int
+        a date interval size in days to calculate fire weather indexes for. 
+        This parameter is intended to accelerate the calculation time in detriment to results quality. 
+        Default is None.
     show_progress: bool
         if set to True shows a progress bar. Default is False.
     warnings_action : str
@@ -48,21 +72,50 @@ def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%
 
 
     first_time = True
+    df = pd.DataFrame({
+        'latitude': [],
+        'longitude': [],
+        time_name: [],
+        temp_name: [],
+        precip_name: [],
+        hum_name: [],
+        wind_name: [],
+        'ffmc': [],
+        'dmc': [],
+        'dc': [],
+        'isi': [],
+        'bui': [],
+        'fwi': []
+    })
+
     with warnings.catch_warnings(action=warnings_action):
         # Create a unique name for a temporary file
-        temp_file_name = os.path.join(temp_meteo_folder, f"temp_{dt.now().isoformat().replace(':','_')}.csv")
+        temp_file_name = os.path.join(temp_meteo_folder, f"temp_{datetime.now().isoformat().replace(':','_')}.csv")
         # Save the dataset to a the temporary file
         unique_coords = ds[["latitude","longitude"]].drop_duplicates()
 
         # Creating a range for the loop
-        rng = range(unique_coords.shape[0])
+        nb_intervals = math.ceil(((end_date - start_date).days + 1) / date_interval_size) if date_interval_size != None else 1
+        rng = range(unique_coords.shape[0] * nb_intervals)
         if show_progress:
-            rng = tqdm(range(unique_coords.shape[0]), desc='Calculating Fire Weather Indexes')
+            rng = tqdm(range(unique_coords.shape[0] * nb_intervals), desc='Calculating Fire Weather Indexes')
 
         for i in rng:
-            lat_condition = ds["latitude"]==unique_coords.iloc[i, 0]
-            lng_condition = ds["longitude"]==unique_coords.iloc[i, 1]
-            local_ds = ds[lat_condition & lng_condition]
+            row_index = i // nb_intervals
+            lat_condition = ds["latitude"]==unique_coords.iloc[row_index, 0]
+            lng_condition = ds["longitude"]==unique_coords.iloc[row_index, 1]
+
+            date_condition_gt = [True] * ds.shape[0]
+            date_condition_lt = date_condition_gt
+            if date_interval_size != None:
+                date_index = i % nb_intervals
+                temp_end_interval = start_date + timedelta(days=((date_index + 1)*date_interval_size) - 1)
+                end_interval = end_date if end_date <= temp_end_interval else temp_end_interval
+                date_condition_gt = ds["date"] >= convert_to_datetime(start_date + timedelta(days=date_index*date_interval_size))
+                date_condition_lt = ds["date"] <= convert_to_datetime(end_interval)
+
+            local_ds = ds[lat_condition & lng_condition & date_condition_gt & date_condition_lt]
+            local_ds['date'] = local_ds['date'].dt.strftime(time_format)
             local_ds.to_csv(temp_file_name)
             # Create a firedanger instance
             fire = firedanger(temp_file_name, time_name=time_name, time_format=time_format)
@@ -83,4 +136,5 @@ def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%
     
     # Delete the temporary file
     os.remove(temp_file_name)
+
     return df
