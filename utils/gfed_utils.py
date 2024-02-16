@@ -263,7 +263,12 @@ def date_iterator(start_date:date, end_date:date):
 
 def get_gfed_emissions_data_for_range(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, gfed_files_folder=".", show_progress=False) ->pd.DataFrame:
     
-    final_emissions_df = pd.DataFrame()
+    final_emissions_df = pd.DataFrame({
+        'latitude': [],
+        'longitude': [],
+        'date': [],
+        'fire_carbon_emission': []
+    })
     first_time = True
 
     # Create a range for the first loop

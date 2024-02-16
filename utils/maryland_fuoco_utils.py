@@ -107,7 +107,12 @@ def get_daily_burned_area_data(start_date:date, end_date:date, lat_min:float, la
     y_min = math.floor((lat_min + 90) * 4)
     y_max = math.floor((lat_max + 90) * 4)
 
-    df = pd.DataFrame() # Final Dataframe to be returned
+    df = pd.DataFrame({
+        'latitude': [],
+        'longitude': [],
+        'date': [],
+        'burned_area': []
+    }) # Final Dataframe to be returned
 
     if show_progress:
         print('Reading HDF Files ...')

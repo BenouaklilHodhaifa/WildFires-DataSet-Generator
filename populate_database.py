@@ -102,9 +102,8 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
                               show_progress=(show_progress=='meteo' or show_progress=='all'))
     
     # Get data with fire indexes
-    if show_progress == 'all':
-        print("Calculating Fire Indexes ...")
-    fire_indexes_df = get_data_with_fire_indexes(meteo_df, temp_meteo_folder="data/meteo")
+    fire_indexes_df = get_data_with_fire_indexes(meteo_df, temp_meteo_folder="data/meteo", 
+                                                 show_progress=(show_progress == 'all'))
     del meteo_df # Delete meteo dataframe from memory as we don't need it anymore
     
     # Get data from burned area

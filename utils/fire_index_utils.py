@@ -4,9 +4,11 @@ import os
 from datetime import datetime as dt
 import warnings
 import pandas as pd
+from tqdm import tqdm
 
 def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%Y%m%d", temp_name="temperature",
-                                  precip_name="precipitation", hum_name="air_humidity", wind_name="wind_speed", temp_meteo_folder=".",
+                                  precip_name="precipitation", hum_name="air_humidity", wind_name="wind_speed", 
+                                  temp_meteo_folder=".", show_progress=False,
                                    warnings_action="ignore") -> pd.DataFrame:
     """
     Adds fire indexes (ffmc, dmc, dc, isi, bui and fwi) to a specified dataset that has to include 
@@ -32,6 +34,8 @@ def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%
         name of the column referring to the wind speed (m/s) of each observation. Default is "U".
     temp_meteo_folder : str
         path of the folder where to store temporary files made from meteo data
+    show_progress: bool
+        if set to True shows a progress bar. Default is False.
     warnings_action : str
         decides what action to do if there is warnings displaying. Default is "ignore". Set to None, if 
         the warnings should be displayed. 
@@ -49,9 +53,15 @@ def get_data_with_fire_indexes(ds:pd.DataFrame, time_name="date", time_format="%
         temp_file_name = os.path.join(temp_meteo_folder, f"temp_{dt.now().isoformat().replace(':','_')}.csv")
         # Save the dataset to a the temporary file
         unique_coords = ds[["latitude","longitude"]].drop_duplicates()
-        for _, coord in unique_coords.iterrows():
-            lat_condition = ds["latitude"]==coord[0]
-            lng_condition = ds["longitude"]==coord[1]
+
+        # Creating a range for the loop
+        rng = range(unique_coords.shape[0])
+        if show_progress:
+            rng = tqdm(range(unique_coords.shape[0]), desc='Calculating Fire Weather Indexes')
+
+        for i in rng:
+            lat_condition = ds["latitude"]==unique_coords.iloc[i, 0]
+            lng_condition = ds["longitude"]==unique_coords.iloc[i, 1]
             local_ds = ds[lat_condition & lng_condition]
             local_ds.to_csv(temp_file_name)
             # Create a firedanger instance
