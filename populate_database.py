@@ -40,9 +40,9 @@ def connect_to_database():
         print(f"Error: '{err}'")
     return connection
 
-def execute_query(connection:mysql.connector.connection.MySQLConnection, query:str):
+def execute_dql_query(connection:mysql.connector.connection.MySQLConnection, query:str):
     """
-    Executes a specefic query for a specific MySQL connection.
+    Executes a specefic DQL query for a specific MySQL connection.
     
     Parameters
     ----------
@@ -53,22 +53,54 @@ def execute_query(connection:mysql.connector.connection.MySQLConnection, query:s
 
     Returns
     -------
-    out : bool
-        True is the query executed successfully. False otherwise.
+    out : Generator[MySQLCursor, None, None] | None
+        Result of the query
     """
-    status = False
-    cursor = connection.cursor()
+    res = None
+    cursor = connection.cursor(buffered=True)
+
+    try:
+        cursor.execute(query)
+        res = []
+        for e in cursor:
+            res.append(e)
+    except Error as err:
+        print(f"Error: '{err}'")
+
+    cursor.close()
+    return res
+
+def execute_dml_query(connection:mysql.connector.connection.MySQLConnection, query:str):
+    """
+    Executes a specefic DML query for a specific MySQL connection.
+    
+    Parameters
+    ----------
+    connection : MySQLConnection
+        the specific MySQL connection.
+    query : str
+        the query to be executed.
+
+    Returns
+    -------
+    out : int | None
+        id of the last inserted row if it's a AUTOINCREMENT ID
+    """
+    res = None
+    cursor = connection.cursor(buffered=True)
 
     try:
         cursor.execute(query)
         connection.commit()
-        status = True
+        res = (cursor.lastrowid, cursor.rowcount)
     except Error as err:
         print(f"Error: '{err}'")
 
-    return status
+    cursor.close()
+    return res
 
-def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, date_interval_size:int=None, show_progress=Literal['none', 'all', 'meteo']):
+def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:float, lng_min:float, lng_max:float, 
+                         dataset_id:int=None, date_interval_size:int=None, show_progress=Literal['none', 'all', 'meteo']):
     """
     Loads data into database for a specific geographical and time range.
 
@@ -86,6 +118,8 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
         minimum bound of the longitude for the geographical range.
     lng_max : float
         maximum bound of the longitude for the geographical range.
+    dataset_id : int
+        id of the dataset to link retrived data to. Default is None.
     date_interval_size : int
         a date interval size in days to calculate fire weather indexes for. 
         This parameter is intended to accelerate the calculation time in detriment to results quality. 
@@ -147,18 +181,32 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
         print("Inserting into Database ...")
     #insert_values = [f"({','.join(map(lambda x: 'NULL' if x == None else f"'{str(x)}'", row))})" for row in df.values]
     map_function = lambda x: 'NULL' if x == None else f"'{str(x)}'"
-    insert_values = [f"({','.join(map(map_function, row))})" for row in df.values]
-    success = execute_query(connection, f"INSERT IGNORE INTO wildfires_data VALUES {','.join(insert_values)};")
-
-    # Print a final message
-    if show_progress == 'all':
-        if success:
+    dataset_id_str = str(dataset_id) if dataset_id != None else 'NULL'
+    insert_values = [f"({','.join(map(map_function, row)) + ', ' + dataset_id_str})" for row in df.values]
+    res = execute_dml_query(connection, (
+        "INSERT IGNORE INTO wildfires_data (latitude, longitude, date, temperature, precipitation, air_humidity, "
+        "wind_speed, ffmc, dmc, dc, isi, bui, fwi, burned_area, emissions, burnt, dataset_id) "
+        f"VALUES {','.join(insert_values)};"
+    ))
+    
+    # Number of rows inserted
+    nbr_rows = 0
+    if res != None:
+        # Get row count
+        nbr_rows = res[1]
+        # Print a final message
+        if show_progress == 'all':
             print("\nDatabase has been populated successfully !")
-        else:
+    else:
+        if show_progress == 'all':
             print('\nAn error occured when executing the INSERT SQL query, check logs for more details.')
     
+    # Close connection
+    connection.close()
     # Delete the generated dataframe
     del df
+
+    return nbr_rows
 
 # Main Script
 if __name__ == "__main__":
@@ -171,6 +219,7 @@ if __name__ == "__main__":
     parser.add_argument("--lng_max", help="Maximum longitude of the geographical range")
     parser.add_argument("--start_date", help="Start date of the time range in format dd/mm/yy")
     parser.add_argument("--end_date", help="End date of the time range in format dd/mm/yy")
+    parser.add_argument("--dataset_name", help="Defines a name for the dataset that will be created")
     parser.add_argument("--nb_checkpoints_lat", help="Divides the geographical latitude range into the number of checkpoints specified and loads data to database at the end of each checkpoint")
     parser.add_argument("--nb_checkpoints_lng", help="Divides the geographical longitude range into the number of checkpoints specified and loads data to database at the end of each checkpoint")
     parser.add_argument("--date_interval_size", help="Specifies a date interval size in days to calculate fire weather indexes for. This parameter is intended to accelerate the calculation time in detriment to results quality.")
@@ -185,6 +234,7 @@ if __name__ == "__main__":
     lng_max = float(args['lng_max'])
     start_date = datetime.strptime(args['start_date'], "%d/%m/%Y").date()
     end_date = datetime.strptime(args['end_date'], "%d/%m/%Y").date()
+    dataset_name = args['dataset_name'] if args['dataset_name'] != None else 'NULL'
     nb_checkpoints_lat = int(args['nb_checkpoints_lat']) if args['nb_checkpoints_lat'] != None else 1
     nb_checkpoints_lng = int(args['nb_checkpoints_lng']) if args['nb_checkpoints_lng'] != None else 1
     date_interval_size  = int(args['date_interval_size']) if args['date_interval_size'] != None else None
@@ -193,6 +243,14 @@ if __name__ == "__main__":
     # Load env variables
     load_dotenv()
 
+    # Connect to database and create a dataset
+    connection = connect_to_database()
+    nbr_rows = 0
+    fwi_backtrack_size = date_interval_size if date_interval_size != None else (end_date-start_date).days
+    created_at = datetime.now()
+    dataset_id, _ = execute_dml_query(connection, f"INSERT INTO datasets (name, nbr_rows, fwi_backtrack_size, created_at) VALUES ('{dataset_name}', {nbr_rows}, {fwi_backtrack_size}, '{created_at.isoformat()}');")
+    connection.close()
+    
     # Load data to database by checkpoints
     lat_step = (lat_max - lat_min) / nb_checkpoints_lat
     lng_step = (lng_max - lng_min) / nb_checkpoints_lng
@@ -210,23 +268,31 @@ if __name__ == "__main__":
                                                 lat_min + (lat_index + 1) * lat_step,
                                                 lng_min + lng_index * lng_step, 
                                                 lng_min + (lng_index + 1) * lng_step,
+                                                dataset_id,
                                                 date_interval_size,
                                                 'meteo'))
             
             for future in concurrent.futures.as_completed(futures):
                 cpt += 1
+                nbr_rows += future.result()
                 print(f"Total Progress : {cpt*100/(nb_checkpoints_lat * nb_checkpoints_lng)} %")
     else:
         for i in range(nb_checkpoints_lat * nb_checkpoints_lng):
             print(f"\n============= CheckPoint {i+1} ===============\n")
             lat_index = i // nb_checkpoints_lat
             lng_index = i % nb_checkpoints_lat
-            load_dataframe_to_db(start_date, end_date, 
+            nbr_rows += load_dataframe_to_db(start_date, end_date, 
                                     lat_min + lat_index * lat_step,
                                     lat_min + (lat_index + 1) * lat_step,
                                     lng_min + lng_index * lng_step, 
                                     lng_min + (lng_index + 1) * lng_step,
+                                    dataset_id=dataset_id,
                                     date_interval_size=date_interval_size,
                                     show_progress='all')
             
             print(f"Total Progress : {(i+1)*100/(nb_checkpoints_lat * nb_checkpoints_lng)} %")
+
+    connection = connect_to_database()
+    created_at = datetime.now()
+    execute_dml_query(connection, f"UPDATE datasets SET nbr_rows={nbr_rows}, created_at='{created_at.isoformat()}' WHERE id={dataset_id};")
+    connection.close()
