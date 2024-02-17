@@ -17,6 +17,10 @@ from typing import Literal
 # Ignore logs from third-party modules (Change this line if you want to show all logs)
 logging.getLogger().setLevel(logging.CRITICAL)
 
+WILFIRES_DATA_INSERT_QUERY = open('sql/wildfires_data_insert.sql').read()
+DATASETS_INSERT_QUERY = open('sql/datasets_insert.sql').read()
+DATASETS_UPDATE_QUERY = open('sql/datasets_update.sql').read()
+
 # Connect to database
 def connect_to_database():
     """
@@ -40,7 +44,7 @@ def connect_to_database():
         print(f"Error: '{err}'")
     return connection
 
-def execute_dql_query(connection:mysql.connector.connection.MySQLConnection, query:str):
+def execute_dql_query(connection:mysql.connector.connection.MySQLConnection, query:str, params:tuple):
     """
     Executes a specefic DQL query for a specific MySQL connection.
     
@@ -60,7 +64,7 @@ def execute_dql_query(connection:mysql.connector.connection.MySQLConnection, que
     cursor = connection.cursor(buffered=True)
 
     try:
-        cursor.execute(query)
+        cursor.execute(query, params)
         res = []
         for e in cursor:
             res.append(e)
@@ -70,7 +74,7 @@ def execute_dql_query(connection:mysql.connector.connection.MySQLConnection, que
     cursor.close()
     return res
 
-def execute_dml_query(connection:mysql.connector.connection.MySQLConnection, query:str):
+def execute_dml_query(connection:mysql.connector.connection.MySQLConnection, query:str, params:tuple|list[tuple], many=False):
     """
     Executes a specefic DML query for a specific MySQL connection.
     
@@ -80,6 +84,8 @@ def execute_dml_query(connection:mysql.connector.connection.MySQLConnection, que
         the specific MySQL connection.
     query : str
         the query to be executed.
+    many : bool
+        specifies if there is multiple lines of data to be handled.
 
     Returns
     -------
@@ -90,7 +96,11 @@ def execute_dml_query(connection:mysql.connector.connection.MySQLConnection, que
     cursor = connection.cursor(buffered=True)
 
     try:
-        cursor.execute(query)
+        if many:
+            cursor.executemany(query, params)
+        else:
+            cursor.execute(query, params)
+
         connection.commit()
         res = (cursor.lastrowid, cursor.rowcount)
     except Error as err:
@@ -179,15 +189,9 @@ def load_dataframe_to_db(start_date:date, end_date:date, lat_min:float, lat_max:
     # Insert the generated dataframe to the database
     if show_progress == 'all':
         print("Inserting into Database ...")
-    #insert_values = [f"({','.join(map(lambda x: 'NULL' if x == None else f"'{str(x)}'", row))})" for row in df.values]
-    map_function = lambda x: 'NULL' if x == None else f"'{str(x)}'"
-    dataset_id_str = str(dataset_id) if dataset_id != None else 'NULL'
-    insert_values = [f"({','.join(map(map_function, row)) + ', ' + dataset_id_str})" for row in df.values]
-    res = execute_dml_query(connection, (
-        "INSERT IGNORE INTO wildfires_data (latitude, longitude, date, temperature, precipitation, air_humidity, "
-        "wind_speed, ffmc, dmc, dc, isi, bui, fwi, burned_area, emissions, burnt, dataset_id) "
-        f"VALUES {','.join(insert_values)};"
-    ))
+    
+    insert_values = [(*row, dataset_id) for row in df.values]
+    res = execute_dml_query(connection, WILFIRES_DATA_INSERT_QUERY, insert_values, many=True)
     
     # Number of rows inserted
     nbr_rows = 0
@@ -248,51 +252,58 @@ if __name__ == "__main__":
     nbr_rows = 0
     fwi_backtrack_size = date_interval_size if date_interval_size != None else (end_date-start_date).days
     created_at = datetime.now()
-    dataset_id, _ = execute_dml_query(connection, f"INSERT INTO datasets (name, nbr_rows, fwi_backtrack_size, created_at) VALUES ('{dataset_name}', {nbr_rows}, {fwi_backtrack_size}, '{created_at.isoformat()}');")
+    res = execute_dml_query(connection, DATASETS_INSERT_QUERY, (dataset_name, nbr_rows, fwi_backtrack_size, created_at.isoformat()))
     connection.close()
-    
-    # Load data to database by checkpoints
-    lat_step = (lat_max - lat_min) / nb_checkpoints_lat
-    lng_step = (lng_max - lng_min) / nb_checkpoints_lng
 
-    if parallel:
-        cpt = 0 # Number of checkpoints passed (completed)
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [] # Array to store future objects
-            print(f"INFO: Running on {executor._max_workers} threads.")
+    # If the dataset is created successfully
+    if res != None:
+        dataset_id = res[0]
+
+        # Load data to database by checkpoints
+        lat_step = (lat_max - lat_min) / nb_checkpoints_lat
+        lng_step = (lng_max - lng_min) / nb_checkpoints_lng
+
+        if parallel:
+            cpt = 0 # Number of checkpoints passed (completed)
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = [] # Array to store future objects
+                print(f"INFO: Running on {executor._max_workers} threads.")
+                for i in range(nb_checkpoints_lat * nb_checkpoints_lng):
+                    lat_index = i // nb_checkpoints_lat
+                    lng_index = i % nb_checkpoints_lat
+                    futures.append(executor.submit(load_dataframe_to_db, start_date, 
+                                                    end_date, lat_min + lat_index * lat_step,
+                                                    lat_min + (lat_index + 1) * lat_step,
+                                                    lng_min + lng_index * lng_step, 
+                                                    lng_min + (lng_index + 1) * lng_step,
+                                                    dataset_id,
+                                                    date_interval_size,
+                                                    'meteo'))
+                
+                for future in concurrent.futures.as_completed(futures):
+                    cpt += 1
+                    nbr_rows += future.result()
+                    print(f"Total Progress : {cpt*100/(nb_checkpoints_lat * nb_checkpoints_lng)} %")
+        else:
             for i in range(nb_checkpoints_lat * nb_checkpoints_lng):
+                print(f"\n============= CheckPoint {i+1} ===============\n")
                 lat_index = i // nb_checkpoints_lat
                 lng_index = i % nb_checkpoints_lat
-                futures.append(executor.submit(load_dataframe_to_db, start_date, 
-                                                end_date, lat_min + lat_index * lat_step,
-                                                lat_min + (lat_index + 1) * lat_step,
-                                                lng_min + lng_index * lng_step, 
-                                                lng_min + (lng_index + 1) * lng_step,
-                                                dataset_id,
-                                                date_interval_size,
-                                                'meteo'))
-            
-            for future in concurrent.futures.as_completed(futures):
-                cpt += 1
-                nbr_rows += future.result()
-                print(f"Total Progress : {cpt*100/(nb_checkpoints_lat * nb_checkpoints_lng)} %")
-    else:
-        for i in range(nb_checkpoints_lat * nb_checkpoints_lng):
-            print(f"\n============= CheckPoint {i+1} ===============\n")
-            lat_index = i // nb_checkpoints_lat
-            lng_index = i % nb_checkpoints_lat
-            nbr_rows += load_dataframe_to_db(start_date, end_date, 
-                                    lat_min + lat_index * lat_step,
-                                    lat_min + (lat_index + 1) * lat_step,
-                                    lng_min + lng_index * lng_step, 
-                                    lng_min + (lng_index + 1) * lng_step,
-                                    dataset_id=dataset_id,
-                                    date_interval_size=date_interval_size,
-                                    show_progress='all')
-            
-            print(f"Total Progress : {(i+1)*100/(nb_checkpoints_lat * nb_checkpoints_lng)} %")
+                nbr_rows += load_dataframe_to_db(start_date, end_date, 
+                                        lat_min + lat_index * lat_step,
+                                        lat_min + (lat_index + 1) * lat_step,
+                                        lng_min + lng_index * lng_step, 
+                                        lng_min + (lng_index + 1) * lng_step,
+                                        dataset_id=dataset_id,
+                                        date_interval_size=date_interval_size,
+                                        show_progress='all')
+                
+                print(f"Total Progress : {(i+1)*100/(nb_checkpoints_lat * nb_checkpoints_lng)} %")
 
-    connection = connect_to_database()
-    created_at = datetime.now()
-    execute_dml_query(connection, f"UPDATE datasets SET nbr_rows={nbr_rows}, created_at='{created_at.isoformat()}' WHERE id={dataset_id};")
-    connection.close()
+        connection = connect_to_database()
+        created_at = datetime.now()
+        execute_dml_query(connection, DATASETS_UPDATE_QUERY, (nbr_rows, created_at.isoformat(), dataset_id))
+        connection.close()
+    
+    else:
+        print("The dataset could not be created !")

@@ -1,0 +1,1 @@
+UPDATE datasets SET nbr_rows=%s, created_at=%s WHERE id=%s;
