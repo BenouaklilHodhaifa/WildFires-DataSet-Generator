@@ -1,9 +1,10 @@
-from flask import request
+from flask import request, current_app as app
 from datetime import date
 from app import db
 from flask import jsonify, make_response
 from sqlalchemy import text
 import pandas as pd
+from .utils import get_formatted_date
 
 def query():
     """User route controller for getting requested data"""
@@ -16,14 +17,17 @@ def query():
         end_date = date.fromisoformat(request.args['end_date'])
 
         connection = db.engine.connect() # Connect to database
-        
-        df = pd.read_sql(text((
-            "SELECT * FROM wildfires_data "
-            f"WHERE (latitude BETWEEN {lat_min} AND {lat_max}) "
-            f"AND (longitude BETWEEN {lng_min} AND {lng_max}) "
-            f"AND (date BETWEEN '{start_date.year}-{str(start_date.month).zfill(2)}-{str(start_date.day).zfill(2)}' "
-            f"AND '{end_date.year}-{str(end_date.month).zfill(2)}-{str(end_date.day).zfill(2)}')"
-        )), connection) # Query data
+        # Query params
+        params = {
+            "lat_min": lat_min,
+            "lat_max": lat_max,
+            "lng_min": lng_min,
+            "lng_max": lng_max,
+            "start_date": get_formatted_date(start_date),
+            "end_date": get_formatted_date(end_date)
+        }
+
+        df = pd.read_sql(text(app.config['WILDFIRES_DATA_QUERY']), connection, params=params) # Query data
 
         # Serve data read as a csv file
         resp = make_response(df.to_csv(index=False))
@@ -44,7 +48,7 @@ def limits():
         # Connect to database
         connection = db.engine.connect()
         # Get limits of data
-        cursor = connection.execute(text("SELECT MIN(latitude), MAX(latitude), MIN(longitude), MAX(longitude), MIN(date), MAX(date) from wildfires_data"))
+        cursor = connection.execute(text(app.config['WILDFIRES_DATA_LIMIT_QUERY']))
         res = {}
         for r in cursor:
             res = {

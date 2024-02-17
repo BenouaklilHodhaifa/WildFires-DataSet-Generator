@@ -11,6 +11,14 @@ def create_app():
 
     app = Flask("WildFires_Dataset_Generator", template_folder='app/templates', static_folder='app/static')  # Naming our application
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+
+    # Get SQL queries
+    WILDFIRES_DATA_LIMIT_QUERY = open(os.path.join('sql', 'wildfires_data_limits.sql')).read()
+    WILDFIRES_DATA_QUERY = open(os.path.join('sql', 'wildfires_data_query.sql')).read()
+
+    app.config['WILDFIRES_DATA_LIMIT_QUERY'] = WILDFIRES_DATA_LIMIT_QUERY
+    app.config['WILDFIRES_DATA_QUERY'] = WILDFIRES_DATA_QUERY
+
     CORS(app)
     
     db.init_app(app)

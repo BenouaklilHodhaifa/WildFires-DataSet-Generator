@@ -1,0 +1,1 @@
+SELECT MIN(latitude), MAX(latitude), MIN(longitude), MAX(longitude), MIN(date), MAX(date) from wildfires_data;
