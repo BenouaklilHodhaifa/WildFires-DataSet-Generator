@@ -373,7 +373,7 @@
                         noDatasetText.style.display = 'none';
                         // Create items elements one by one
                         for(i=0; i<info.length; i++){
-                            createInfoPopUpItem(popUpContent, info[0])
+                            createInfoPopUpItem(popUpContent, info[0], i);
                         }
                     }
                     else
@@ -411,39 +411,85 @@
                 noDatasetText.style.display = 'none';
             }
         }
+
+        // // Callback function for download All
+        // async function downloadAllDataset(index, dataset_id, itemElem)
+        // {
+
+        // }
+
+        // // Callback function for download Selected
+        // async function downloadSelectedDataset(index, dataset_id, lat_min, lat_max, lng_min, lng_max)
+        // {
+
+        // }
         
         // Create an info popup item
-        function createInfoPopUpItem(popUpContentElement, datasetInfo)
+        function createInfoPopUpItem(popUpContentElement, datasetInfo, index)
         {
             // Create the popUpItem
             const popUpItem = document.createElement("div");
             popUpItem.className = "info-popup-list-item";
 
+            // Create containers
+            const popUpItemContainer = document.createElement("div");
+            // const buttonsContainer = document.createElement("div");
+
             // Dataset Name
             const datasetNameElem = document.createElement("p");
             datasetNameElem.innerHTML = "<span>Name :</span> " + datasetInfo["name"];
-            popUpItem.appendChild(datasetNameElem);
+            popUpItemContainer.appendChild(datasetNameElem);
 
             // Dataset Size
             const datasetSizeElem = document.createElement("p");
             datasetSizeElem.innerHTML = "<span>Size :</span> " + datasetInfo["nbr_rows"] + " row(s)";
-            popUpItem.appendChild(datasetSizeElem);
+            popUpItemContainer.appendChild(datasetSizeElem);
 
             // Dataset Selected Ratio
             const datasetSelectedRatioElem = document.createElement("p");
             datasetSelectedRatioElem.innerHTML = "<span>Selected Ratio :</span> " + (Math.round(datasetInfo["ratio"]*100)/100) + "%";
-            popUpItem.appendChild(datasetSelectedRatioElem);
+            popUpItemContainer.appendChild(datasetSelectedRatioElem);
 
             // Dataset Backtracking size
             const datasetBacktrackSizeElem = document.createElement("p");
             datasetBacktrackSizeElem.innerHTML = "<span>Backtracking Size :</span> " + datasetInfo["fwi_backtrack_size"] + " day(s)";
-            popUpItem.appendChild(datasetBacktrackSizeElem);
+            popUpItemContainer.appendChild(datasetBacktrackSizeElem);
 
             // Dataset Creation Date
             const createdAtDate = new Date(datasetInfo["created_at"]);
             const datasetDateElem = document.createElement("p");
             datasetDateElem.innerHTML = "<span>Created at :</span> " + format_full_date(createdAtDate);
-            popUpItem.appendChild(datasetDateElem);
+            popUpItemContainer.appendChild(datasetDateElem);
+
+            popUpItem.appendChild(popUpItemContainer);
+
+            // Create Buttons
+            // const downloadAllButton = document.createElement("div");
+            // downloadAllButton.className = "more-info-download-button";
+            // downloadAllButton.innerHTML = "Download All";
+            // downloadAllButton.onclick = "downloadAllDataset(index, datasetInfo['id'], popUpItem)";
+            // // Add loader
+            // const downloadAllLoader = document.createElement("div");
+            // downloadAllLoader.className = "more-info-download-button-loader";
+            // downloadAllButton.appendChild(downloadAllLoader);
+
+            // const downloadSelectedButton = document.createElement("div");
+            // downloadSelectedButton.className = "more-info-download-button";
+            // downloadSelectedButton.innerHTML = "Download Selected"
+            // const lat_min = Math.min(latlng1.lat, latlng2.lat);
+            // const lat_max = Math.max(latlng1.lat, latlng2.lat);
+            // const lng_min = Math.min(latlng1.lng, latlng2.lng);
+            // const lng_max = Math.max(latlng1.lng, latlng2.lng);
+            // downloadSelectedButton.onclick = "downloadSelectedDataset(index, datasetInfo['id'], lat_min, lat_max, lng_min, lng_max)";
+            // // Add loader
+            // const downloadSelectedLoader = document.createElement("div");
+            // downloadSelectedLoader.className = "more-info-download-button-loader";
+            // downloadSelectedButton.appendChild(downloadSelectedLoader);
+
+            // buttonsContainer.appendChild(downloadAllButton);
+            // buttonsContainer.appendChild(downloadSelectedButton);
+
+            // popUpItem.appendChild(buttonsContainer);
 
             popUpContentElement.appendChild(popUpItem);
         }

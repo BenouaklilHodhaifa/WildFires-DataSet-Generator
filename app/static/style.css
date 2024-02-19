@@ -430,6 +430,9 @@ body {
 }
 
 .info-popup-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     width: 100%;
     padding: 4px 0;
     margin: 8px 0;
@@ -446,6 +449,56 @@ body {
 .info-popup-list-item span {
     font-weight: 600;
 }
+
+/* ====== Info Popup Buttons ====== */
+
+.more-info-download-button {
+    width: 80%;
+    margin: 8px 0;
+    --tooltip-height: 35px;
+    --tooltip-width: 120px;
+    --gap-between-tooltip-to-button: 18px;
+    --button-color: black;
+    --tooltip-color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px var(--button-color) solid;
+    position: relative;
+    text-align: center;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    border-radius: 0.4em;
+    cursor: pointer;
+  }
+
+.more-info-download-button p {
+    color: var(--button-color);
+}
+
+.more-info-download-button:active {
+    transform: scale(0.95);
+}
+
+/* ==== Loader ==== */
+
+.more-info-download-button-loader {
+    visibility: hidden; /* Initially hide the loader */
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: 1.1em;
+    aspect-ratio: 1;
+    border-radius: 100%;
+    border: 4px solid black;
+    border-right-color: #EEEEEE;
+    animation: l2 1s infinite linear;
+}
+@keyframes l2 {to{transform: rotate(1turn)}}
 
 /* ====== When there's no datasets ============ */
 
