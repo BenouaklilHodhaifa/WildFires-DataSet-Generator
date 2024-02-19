@@ -69,7 +69,7 @@
                     </div>
                     <div class="button-container">
                         <button id="generate-button" class="submit-button" onclick="generateData()">
-                            <span id="idle-content">Generate</span>
+                            <span id="generate-idle-content">Generate</span>
                             <div id="generate-button-loader"></div>
                         </button>
                         <a id="download-button" class="download-button" data-tooltip="Size: 20 MB">
@@ -80,11 +80,24 @@
                                 </span>
                             </div>
                         </a>
+                        <div id="more-info-button" class="more-info-button" onclick="showDetails()">
+                            <div id="more-info-idle-content" class="text">Details</div>
+                            <div id="more-info-button-loader"></div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="content-right">
                 <div id="map"></div>
+            </div>
+        </div>
+        <div id="info-popup" onclick="dialogClickHandler(event)">
+            <div id="info-popup-content">
+                <p class="info-popup-title">Details of datasets found in the specified area</p>
+                <div id="info-popup-no-datasets">
+                    <img src="{{url_for('static', filename='content_not_found.png')}}" alt="No datasets found in that area">
+                    <p>No datasets in that area</p>
+                </div>
             </div>
         </div>
     </div>
@@ -102,6 +115,10 @@
         // Util function to format dates
         function format_date(date){
             return `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+        }
+
+        function format_full_date(date){
+            return `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}:${date.getSeconds().toString().padStart(2,'0')}`;
         }
 
         // Initialize time range inputs
@@ -258,7 +275,7 @@
         // Callback function of the generate button
         async function generateData(){
             // Change state of the button to loading
-            document.getElementById('idle-content').style.visibility = 'hidden';
+            document.getElementById('generate-idle-content').style.visibility = 'hidden';
             document.getElementById('generate-button-loader').style.visibility = 'visible';
 
             // Get markers positions (for the geographical range)
@@ -295,6 +312,7 @@
                     a.download = 'data.csv'; // Name the downloaded file
                     a.setAttribute('data-tooltip', `Size: ${humanFileSize(blob.size)}`); // Update the data tooltip with the file size
                     a.style.visibility = 'visible'; // Make the download button visible
+                    a.style.display = 'inline'; // Make space for the download button
                 } else {
                     console.log(`Error code ${res.status}`);
                 }
@@ -303,8 +321,131 @@
             }
 
             // Reset state of button to idle
-            document.getElementById('idle-content').style.visibility = 'visible';
+            document.getElementById('generate-idle-content').style.visibility = 'visible';
             document.getElementById('generate-button-loader').style.visibility = 'hidden';
+        }
+
+        // Callback function for details button
+        async function showDetails()
+        {
+            // Change state of the button to loading
+            document.getElementById('more-info-idle-content').style.visibility = 'hidden';
+            document.getElementById('more-info-button-loader').style.visibility = 'visible';
+
+            try {
+                // Get additional info
+                const res_info = await fetch("/datasets/query/info?" + new URLSearchParams({
+                    lat_min: Math.min(latlng1.lat, latlng2.lat),
+                    lat_max: Math.max(latlng1.lat, latlng2.lat),
+                    lng_min: Math.min(latlng1.lng, latlng2.lng),
+                    lng_max: Math.max(latlng1.lng, latlng2.lng),
+                    start_date: format_date(start_date),
+                    end_date: format_date(end_date)
+                }),
+                {
+                    method: 'get',
+                });
+                
+                // If the request was successfull
+                if (res_info.status === 200) {
+                    // Get the info data
+                    const info = await res_info.json()
+
+                    // Show the popup
+                    const popUp = document.getElementById('info-popup');
+                    popUp.style.visibility = 'visible';
+                    popUp.style.display = 'flex';
+
+                    // Create items elements
+                    const popUpContent = document.getElementById('info-popup-content');
+                    const noDatasetText = document.getElementById('info-popup-no-datasets');
+                    // Remove previous popUp Elems to clear previous results
+                    const previousPopUpContentElems = document.getElementsByClassName('info-popup-list-item');
+                    for(i=0; i<previousPopUpContentElems.length; i++)
+                    {
+                        popUpContent.removeChild(previousPopUpContentElems[i]);
+                    }
+
+                    if(info.length > 0)
+                    {
+                        // Make no datasets text invisible
+                        noDatasetText.style.visibility = 'hidden';
+                        noDatasetText.style.display = 'none';
+                        // Create items elements one by one
+                        for(i=0; i<info.length; i++){
+                            createInfoPopUpItem(popUpContent, info[0])
+                        }
+                    }
+                    else
+                    {
+                        // Make no datasets text visible
+                        noDatasetText.style.visibility = 'visible';
+                        noDatasetText.style.display = 'flex';
+                    }
+                } else {
+                    console.log(`Error code ${res.status}`);
+                }
+            } catch (err) {
+                console.log(err);
+            }
+
+            // Reset state of button to idle
+            document.getElementById('more-info-idle-content').style.visibility = 'visible';
+            document.getElementById('more-info-button-loader').style.visibility = 'hidden';
+        }
+
+        // Handle Popup
+        function dialogClickHandler(e) {
+            // if (e.target.id !== 'info-popup') //This prevents issues with forms
+            //     return;
+
+            const rect = e.target.getBoundingClientRect();
+            const clickedInDialog = (rect.x != 0) || (rect.y != 0);
+            
+            if (clickedInDialog === false)
+            {
+                // Make the popup invisible
+                e.target.style.visibility = 'hidden';
+                const noDatasetText = document.getElementById('info-popup-no-datasets');
+                noDatasetText.style.visibility = 'hidden';
+                noDatasetText.style.display = 'none';
+            }
+        }
+        
+        // Create an info popup item
+        function createInfoPopUpItem(popUpContentElement, datasetInfo)
+        {
+            // Create the popUpItem
+            const popUpItem = document.createElement("div");
+            popUpItem.className = "info-popup-list-item";
+
+            // Dataset Name
+            const datasetNameElem = document.createElement("p");
+            datasetNameElem.innerHTML = "<span>Name :</span> " + datasetInfo["name"];
+            popUpItem.appendChild(datasetNameElem);
+
+            // Dataset Size
+            const datasetSizeElem = document.createElement("p");
+            datasetSizeElem.innerHTML = "<span>Size :</span> " + datasetInfo["nbr_rows"] + " row(s)";
+            popUpItem.appendChild(datasetSizeElem);
+
+            // Dataset Selected Ratio
+            const datasetSelectedRatioElem = document.createElement("p");
+            datasetSelectedRatioElem.innerHTML = "<span>Selected Ratio :</span> " + (Math.round(datasetInfo["ratio"]*100)/100) + "%";
+            popUpItem.appendChild(datasetSelectedRatioElem);
+
+            // Dataset Backtracking size
+            const datasetBacktrackSizeElem = document.createElement("p");
+            datasetBacktrackSizeElem.innerHTML = "<span>Backtracking Size :</span> " + datasetInfo["fwi_backtrack_size"] + " day(s)";
+            popUpItem.appendChild(datasetBacktrackSizeElem);
+
+            // Dataset Creation Date
+            const createdAtDate = new Date(datasetInfo["created_at"]);
+            const datasetDateElem = document.createElement("p");
+            datasetDateElem.innerHTML = "<span>Created at :</span> " + format_full_date(createdAtDate);
+            popUpItem.appendChild(datasetDateElem);
+
+            popUpContentElement.appendChild(popUpItem);
         }
     </script>
 </body>

@@ -15,9 +15,11 @@ def create_app():
     # Get SQL queries
     WILDFIRES_DATA_LIMIT_QUERY = open(os.path.join('sql', 'wildfires_data_limits.sql')).read()
     WILDFIRES_DATA_QUERY = open(os.path.join('sql', 'wildfires_data_query.sql')).read()
+    WILDFIRES_DATA_SOURCES_QUERY = open(os.path.join('sql', 'wildfires_data_sources.sql')).read()
 
     app.config['WILDFIRES_DATA_LIMIT_QUERY'] = WILDFIRES_DATA_LIMIT_QUERY
     app.config['WILDFIRES_DATA_QUERY'] = WILDFIRES_DATA_QUERY
+    app.config['WILDFIRES_DATA_SOURCES_QUERY'] = WILDFIRES_DATA_SOURCES_QUERY
 
     CORS(app)
     
