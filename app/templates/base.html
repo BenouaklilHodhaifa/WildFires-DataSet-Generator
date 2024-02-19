@@ -105,7 +105,8 @@
         // =========================== Initialization ===================================
 
         // Getting the data limits to limit bounds of the map
-        var limits = JSON.parse('{{limits | tojson}}')
+        var limits = JSON.parse('{{limits | tojson}}');
+        var limits_mode = '{{limits_mode}}';
         var date_min = new Date(limits.date_min);
         var date_max = new Date(limits.date_max);
 
@@ -139,13 +140,14 @@
 			center: bounds.getCenter(),
             zoom: 5,
 			layers: [osm],
-			maxBounds: bounds,
+			maxBounds: limits_mode === 'on' ? bounds : null,
 			maxBoundsViscosity: 0.75
 		});
         
         // Calculate the zoom that enable to show the entire area within bounds
         var optimalInitialZoom = map.getBoundsZoom(bounds);
-        map.setMinZoom(optimalInitialZoom); // Limit the min zoom to that calculated zoom
+        if(limits_mode === 'on')
+            map.setMinZoom(optimalInitialZoom); // Limit the min zoom to that calculated zoom
         map.setZoom(optimalInitialZoom); // Set that zoom as an initial zoom
 
         // Area selection feature
