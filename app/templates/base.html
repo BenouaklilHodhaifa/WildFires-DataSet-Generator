@@ -361,12 +361,6 @@
                     // Create items elements
                     const popUpContent = document.getElementById('info-popup-content');
                     const noDatasetText = document.getElementById('info-popup-no-datasets');
-                    // Remove previous popUp Elems to clear previous results
-                    const previousPopUpContentElems = document.getElementsByClassName('info-popup-list-item');
-                    for(i=0; i<previousPopUpContentElems.length; i++)
-                    {
-                        popUpContent.removeChild(previousPopUpContentElems[i]);
-                    }
 
                     if(info.length > 0)
                     {
@@ -374,8 +368,8 @@
                         noDatasetText.style.visibility = 'hidden';
                         noDatasetText.style.display = 'none';
                         // Create items elements one by one
-                        for(i=0; i<info.length; i++){
-                            createInfoPopUpItem(popUpContent, info[0], i);
+                        for(let i=0; i<info.length; i++){
+                            createInfoPopUpItem(popUpContent, info[i], i);
                         }
                     }
                     else
@@ -411,6 +405,14 @@
                 const noDatasetText = document.getElementById('info-popup-no-datasets');
                 noDatasetText.style.visibility = 'hidden';
                 noDatasetText.style.display = 'none';
+
+                // Remove previous popUp Elems to clear previous results
+                const previousPopUpContentElems = document.querySelectorAll('.info-popup-list-item');
+                const popUpContent = document.getElementById('info-popup-content');
+                for(let i=0; i<previousPopUpContentElems.length; i++)
+                {
+                    popUpContent.removeChild(previousPopUpContentElems[i]);
+                }
             }
         }
 

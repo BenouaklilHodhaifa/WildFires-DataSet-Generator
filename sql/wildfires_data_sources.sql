@@ -3,4 +3,5 @@ SELECT d.id, d.name, d.nbr_rows, d.fwi_backtrack_size, d.created_at, COUNT(*)*10
 AND (longitude BETWEEN :lng_min AND :lng_max) 
 AND (date BETWEEN :start_date AND :end_date)
 AND (w.dataset_id = d.id)
+GROUP BY d.id 
 ORDER BY ratio DESC;
